@@ -24,15 +24,8 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
-# Запрещаем отображение содержимого каталогов.
-Options -Indexes
-
-# Не разрешаем веб-серверу отдавать скрытые файлы.
-<FilesMatch "^\.">
-    Require all denied
-</FilesMatch>
-
-# Защитные HTTP-заголовки.
+# Базовые защитные заголовки. Если mod_headers недоступен,
+# сайт продолжит работать без ошибки.
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"
