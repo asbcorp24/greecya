@@ -4,9 +4,37 @@
     </IfModule>
 
     RewriteEngine On
+
+    # Передаём заголовок Authorization в Laravel.
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Передаём X-XSRF-TOKEN для запросов из JavaScript.
+    RewriteCond %{HTTP:X-XSRF-TOKEN} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-TOKEN}]
+
+    # Убираем завершающий слеш, если это не существующий каталог.
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Все несуществующие файлы и каталоги направляем в Laravel.
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+
+# Запрещаем отображение содержимого каталогов.
+Options -Indexes
+
+# Не разрешаем веб-серверу отдавать скрытые файлы.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Защитные HTTP-заголовки.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
