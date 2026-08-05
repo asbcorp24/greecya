@@ -1,23 +1,40 @@
 <?php
 
+use App\Http\Controllers\AccountAuthController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Admin\CertificateController as AdminCertificateController;
 use App\Http\Controllers\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\GalleryController as AdminGalleryController;
+use App\Http\Controllers\Admin\HeroSlideController as AdminHeroSlideController;
 use App\Http\Controllers\Admin\LeadController as AdminLeadController;
+use App\Http\Controllers\Admin\NewsController as AdminNewsController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ScheduleController as AdminScheduleController;
+use App\Http\Controllers\Admin\TrainerController as AdminTrainerController;
+use App\Http\Controllers\Admin\TrainingPlanController as AdminTrainingPlanController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\GalleryController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\NewsController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
 Route::view('/privacy', 'legal.privacy')->name('privacy');
 Route::view('/offer', 'legal.offer')->name('offer');
+Route::get('/news', [NewsController::class, 'index'])->name('news.index');
+Route::get('/news/{post}', [NewsController::class, 'show'])->name('news.show');
+Route::get('/gallery', [GalleryController::class, 'index'])->name('gallery.index');
+Route::get('/gallery/{album}', [GalleryController::class, 'show'])->name('gallery.show');
+Route::get('/certificates/{certificate}', [CertificateController::class, 'show'])->name('certificate.verify');
+Route::get('/certificates/{certificate}/print', [CertificateController::class, 'print'])->name('certificate.print');
 Route::get('/booking', [BookingController::class, 'index'])->name('booking.index');
 Route::get('/booking/slots', [BookingController::class, 'slots'])->name('booking.slots')->middleware('throttle:60,1');
 Route::post('/booking', [BookingController::class, 'store'])->name('booking.store')->middleware('throttle:15,1');
@@ -26,13 +43,18 @@ Route::post('/request-call', [LeadController::class, 'store'])->name('lead.store
 Route::get('/tickets', CatalogController::class)->name('catalog.index');
 Route::post('/orders', [OrderController::class, 'store'])->name('order.store')->middleware('throttle:10,1');
 Route::get('/orders/success/{order}', [OrderController::class, 'success'])->name('order.success');
-
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'create'])->name('login');
     Route::post('/login', [AuthController::class, 'store'])->name('login.store');
+    Route::get('/account/register', [AccountAuthController::class, 'create'])->name('account.register');
+    Route::post('/account/register', [AccountAuthController::class, 'store'])->name('account.register.store');
 });
 Route::post('/logout', [AuthController::class, 'destroy'])->middleware('auth')->name('logout');
-
+Route::prefix('account')->name('account.')->middleware(['auth', 'customer'])->group(function () {
+    Route::get('/', [AccountController::class, 'dashboard'])->name('dashboard');
+    Route::patch('/profile', [AccountController::class, 'updateProfile'])->name('profile.update');
+    Route::post('/progress', [AccountController::class, 'storeProgress'])->name('progress.store');
+});
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::get('/bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
@@ -43,9 +65,40 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/schedule', [AdminScheduleController::class, 'index'])->name('schedule.index');
     Route::post('/schedule', [AdminScheduleController::class, 'store'])->name('schedule.store');
     Route::delete('/schedule/{slot}', [AdminScheduleController::class, 'destroy'])->name('schedule.destroy');
+    Route::get('/trainers', [AdminTrainerController::class, 'index'])->name('trainers.index');
+    Route::post('/trainers', [AdminTrainerController::class, 'store'])->name('trainers.store');
+    Route::patch('/trainers/{trainer}', [AdminTrainerController::class, 'update'])->name('trainers.update');
+    Route::delete('/trainers/{trainer}', [AdminTrainerController::class, 'destroy'])->name('trainers.destroy');
     Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
     Route::post('/products', [AdminProductController::class, 'store'])->name('products.store');
     Route::patch('/products/{product}', [AdminProductController::class, 'update'])->name('products.update');
     Route::get('/leads', [AdminLeadController::class, 'index'])->name('leads.index');
     Route::patch('/leads/{lead}', [AdminLeadController::class, 'update'])->name('leads.update');
+    Route::get('/news', [AdminNewsController::class, 'index'])->name('news.index');
+    Route::post('/news', [AdminNewsController::class, 'store'])->name('news.store');
+    Route::patch('/news/{post}', [AdminNewsController::class, 'update'])->name('news.update');
+    Route::delete('/news/{post}', [AdminNewsController::class, 'destroy'])->name('news.destroy');
+    Route::get('/gallery', [AdminGalleryController::class, 'index'])->name('gallery.index');
+    Route::post('/gallery/albums', [AdminGalleryController::class, 'storeAlbum'])->name('gallery.albums.store');
+    Route::patch('/gallery/albums/{album}', [AdminGalleryController::class, 'updateAlbum'])->name('gallery.albums.update');
+    Route::delete('/gallery/albums/{album}', [AdminGalleryController::class, 'destroyAlbum'])->name('gallery.albums.destroy');
+    Route::post('/gallery/albums/{album}/photos', [AdminGalleryController::class, 'storePhoto'])->name('gallery.photos.store');
+    Route::patch('/gallery/photos/{photo}', [AdminGalleryController::class, 'updatePhoto'])->name('gallery.photos.update');
+    Route::delete('/gallery/photos/{photo}', [AdminGalleryController::class, 'destroyPhoto'])->name('gallery.photos.destroy');
+    Route::get('/slides', [AdminHeroSlideController::class, 'index'])->name('slides.index');
+    Route::post('/slides', [AdminHeroSlideController::class, 'store'])->name('slides.store');
+    Route::patch('/slides/{slide}', [AdminHeroSlideController::class, 'update'])->name('slides.update');
+    Route::delete('/slides/{slide}', [AdminHeroSlideController::class, 'destroy'])->name('slides.destroy');
+    Route::get('/certificates/scan', [AdminCertificateController::class, 'scan'])->name('certificates.scan');
+    Route::get('/certificates', [AdminCertificateController::class, 'index'])->name('certificates.index');
+    Route::post('/certificates', [AdminCertificateController::class, 'store'])->name('certificates.store');
+    Route::patch('/certificates/{certificate}', [AdminCertificateController::class, 'update'])->name('certificates.update');
+    Route::post('/certificates/{certificate}/redeem', [AdminCertificateController::class, 'redeem'])->name('certificates.redeem');
+    Route::get('/training-plans', [AdminTrainingPlanController::class, 'index'])->name('training-plans.index');
+    Route::post('/training-plans', [AdminTrainingPlanController::class, 'store'])->name('training-plans.store');
+    Route::patch('/training-plans/{plan}', [AdminTrainingPlanController::class, 'update'])->name('training-plans.update');
+    Route::delete('/training-plans/{plan}', [AdminTrainingPlanController::class, 'destroy'])->name('training-plans.destroy');
+    Route::post('/training-plans/{plan}/items', [AdminTrainingPlanController::class, 'storeItem'])->name('training-plans.items.store');
+    Route::delete('/training-plan-items/{item}', [AdminTrainingPlanController::class, 'destroyItem'])->name('training-plans.items.destroy');
+    Route::post('/training-plans/{plan}/progress', [AdminTrainingPlanController::class, 'storeProgress'])->name('training-plans.progress.store');
 });
