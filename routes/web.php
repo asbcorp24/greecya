@@ -16,6 +16,8 @@ use App\Http\Controllers\OrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
+Route::view('/privacy', 'legal.privacy')->name('privacy');
+Route::view('/offer', 'legal.offer')->name('offer');
 Route::get('/booking', [BookingController::class, 'index'])->name('booking.index');
 Route::get('/booking/slots', [BookingController::class, 'slots'])->name('booking.slots')->middleware('throttle:60,1');
 Route::post('/booking', [BookingController::class, 'store'])->name('booking.store')->middleware('throttle:15,1');

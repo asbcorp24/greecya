@@ -1,0 +1,5 @@
+@extends('layouts.app')
+@section('title', 'Вход в CRM — Комплекс Греция')
+@section('content')
+<section class="login-section"><div class="container"><div class="login-card"><div class="text-center mb-4"><span class="brand-mark mx-auto mb-3"><span>Γ</span></span><h1>Вход в CRM</h1><p class="text-muted">Для администратора и менеджеров комплекса</p></div><form method="post" action="{{ route('login.store') }}">@csrf<div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control form-control-lg" name="email" value="{{ old('email') }}" required autofocus></div><div class="mb-3"><label class="form-label">Пароль</label><input type="password" class="form-control form-control-lg" name="password" required></div><div class="form-check mb-4"><input class="form-check-input" type="checkbox" name="remember" value="1" id="remember"><label class="form-check-label" for="remember">Запомнить меня</label></div><button class="btn btn-primary btn-lg w-100 rounded-pill">Войти</button></form></div></div></section>
+@endsection
