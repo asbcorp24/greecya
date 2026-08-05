@@ -1,0 +1,5 @@
+@extends('layouts.app')
+@section('title', 'Фотогалерея — Комплекс Греция')
+@section('content')
+<section class="page-hero"><div class="container"><div class="eyebrow">Атмосфера комплекса</div><h1>Фотогалерея</h1><p>Бассейн, SPA-зоны, тренировки, мероприятия и наши гости.</p></div></section><section class="section-padding"><div class="container"><div class="row g-4">@forelse ($albums as $album)@php($cover = $album->cover_path ?: optional($album->photos->first())->image_path)<div class="col-md-6 col-xl-4"><a class="album-card" href="{{ route('gallery.show', $album) }}"><div class="album-cover">@if ($cover)<img src="{{ Storage::url($cover) }}" alt="{{ $album->title }}">@else<span><i class="bi bi-images"></i></span>@endif<div class="album-count"><i class="bi bi-camera"></i> {{ $album->photos->count() }}</div></div><div class="album-body"><h2>{{ $album->title }}</h2><p>{{ Str::limit($album->description, 120) }}</p></div></a></div>@empty<div class="col-12"><div class="empty-state"><i class="bi bi-images"></i><h3>Фотографии скоро появятся</h3></div></div>@endforelse</div></div></section>
+@endsection
