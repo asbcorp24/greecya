@@ -1,0 +1,5 @@
+@extends('layouts.app')
+@section('title', 'Заказ создан — Комплекс Греция')
+@section('content')
+<section class="success-section"><div class="container"><div class="success-card"><span class="success-icon"><i class="bi bi-bag-check"></i></span><div class="eyebrow eyebrow-blue justify-content-center">Заказ создан</div><h1>{{ $order->number }}</h1><p class="lead">Заказ передан администратору. После подтверждения оплаты будет сформирован электронный билет.</p><div class="success-details"><div><small>Покупатель</small><strong>{{ $order->customer->name }}</strong></div><div><small>Состав</small><strong>{{ $order->items->pluck('name')->join(', ') }}</strong></div><div><small>Сумма</small><strong>{{ number_format($order->total, 0, ',', ' ') }} ₽</strong></div><div><small>Статус</small><strong>Ожидает оплаты</strong></div></div><div class="alert alert-info rounded-4 border-0 text-start">Для рабочего интернет-эквайринга укажите данные платёжного провайдера в <code>.env</code>. До этого заказ подтверждается менеджером вручную.</div><a href="{{ route('home') }}" class="btn btn-primary rounded-pill px-5">На главную</a></div></div></section>
+@endsection

@@ -1,0 +1,133 @@
+@extends('admin.layout')
+
+@section('title', 'Обзор')
+@section('heading', 'Обзор')
+@section('eyebrow', now()->translatedFormat('l, d F'))
+
+@section('content')
+    <div class="row g-4 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <span class="stat-icon blue"><i class="bi bi-calendar2-check"></i></span>
+                <div>
+                    <small>Записей сегодня</small>
+                    <strong>{{ $todayBookings }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <span class="stat-icon coral"><i class="bi bi-funnel"></i></span>
+                <div>
+                    <small>Новых лидов</small>
+                    <strong>{{ $newLeads }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <span class="stat-icon green"><i class="bi bi-people"></i></span>
+                <div>
+                    <small>Клиентов</small>
+                    <strong>{{ $customers }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card">
+                <span class="stat-icon gold"><i class="bi bi-cash-stack"></i></span>
+                <div>
+                    <small>Оплачено за месяц</small>
+                    <strong>{{ number_format($monthRevenue, 0, ',', ' ') }} ₽</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-8">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <div>
+                        <h3>Ближайшие записи</h3>
+                        <p>Предстоящие посещения и тренировки</p>
+                    </div>
+
+                    <a href="{{ route('admin.bookings.index') }}"
+                       class="btn btn-sm btn-outline-primary rounded-pill">
+                        Все записи
+                    </a>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table admin-table align-middle">
+                        <thead>
+                        <tr>
+                            <th>Время</th>
+                            <th>Клиент</th>
+                            <th>Услуга</th>
+                            <th>Статус</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @forelse ($upcomingBookings as $booking)
+                            <tr>
+                                <td>
+                                    <strong>{{ $booking->slot->starts_at->format('d.m H:i') }}</strong>
+                                </td>
+                                <td>
+                                    {{ $booking->customer->name }}
+                                    <small>{{ $booking->customer->phone }}</small>
+                                </td>
+                                <td>{{ $booking->service->name }}</td>
+                                <td>
+                                    <span class="status status-{{ $booking->status }}">
+                                        {{ $booking->status }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    Предстоящих записей нет
+                                </td>
+                            </tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <div>
+                        <h3>Новые заказы</h3>
+                        <p>Последние продажи</p>
+                    </div>
+                </div>
+
+                <div class="order-list">
+                    @forelse ($recentOrders as $order)
+                        <a href="{{ route('admin.orders.index') }}">
+                            <div>
+                                <strong>{{ $order->number }}</strong>
+                                <small>{{ $order->customer->name }}</small>
+                            </div>
+                            <div class="text-end">
+                                <strong>{{ number_format($order->total, 0, ',', ' ') }} ₽</strong>
+                                <small>{{ $order->payment_status }}</small>
+                            </div>
+                        </a>
+                    @empty
+                        <p class="text-muted p-3">Заказов пока нет</p>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
