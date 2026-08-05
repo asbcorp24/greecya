@@ -17,16 +17,16 @@ class DashboardController extends Controller
             'newLeads' => Lead::query()->where('status', 'new')->count(),
             'customers' => Customer::query()->count(),
             'monthRevenue' => Order::query()->where('payment_status', 'paid')->whereMonth('paid_at', now()->month)->whereYear('paid_at', now()->year)->sum('total'),
-            'upcomingBookings' => Booking::query()->with(['customer', 'service', 'slot'])->whereHas('slot', fn ($q) => $q->where('starts_at', '>=', now()))->whereNotIn('status', ['cancelled', 'completed'])->orderBy(ScheduleSlotSubquery::startsAt())->take(8)->get(),
+            'upcomingBookings' => Booking::query()
+                ->select('bookings.*')
+                ->with(['customer', 'service', 'slot'])
+                ->join('schedule_slots', 'schedule_slots.id', '=', 'bookings.schedule_slot_id')
+                ->where('schedule_slots.starts_at', '>=', now())
+                ->whereNotIn('bookings.status', ['cancelled', 'completed'])
+                ->orderBy('schedule_slots.starts_at')
+                ->take(8)
+                ->get(),
             'recentOrders' => Order::query()->with('customer')->latest()->take(6)->get(),
         ]);
-    }
-}
-
-final class ScheduleSlotSubquery
-{
-    public static function startsAt()
-    {
-        return \App\Models\ScheduleSlot::select('starts_at')->whereColumn('schedule_slots.id', 'bookings.schedule_slot_id');
     }
 }

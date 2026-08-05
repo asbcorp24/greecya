@@ -51,6 +51,8 @@ class BookingController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'service_id' => ['required', 'exists:services,id'],
+            'date' => ['required', 'date'],
             'schedule_slot_id' => ['required', 'exists:schedule_slots,id'],
             'name' => ['required', 'string', 'max:120'],
             'phone' => ['required', 'string', 'max:30'],
@@ -63,12 +65,17 @@ class BookingController extends Controller
         $booking = DB::transaction(function () use ($data) {
             $slot = ScheduleSlot::query()->with('service')->lockForUpdate()->findOrFail($data['schedule_slot_id']);
 
-            if ($slot->status !== 'open' || $slot->starts_at->isPast() || $slot->available_places < $data['people']) {
-                throw ValidationException::withMessages(['schedule_slot_id' => 'Выбранное время уже занято. Пожалуйста, выберите другой слот.']);
+            if ((int) $data['service_id'] !== $slot->service_id || $slot->status !== 'open' || $slot->starts_at->isPast() || $slot->available_places < $data['people']) {
+                throw ValidationException::withMessages(['schedule_slot_id' => 'Выбранное время уже занято или не относится к выбранной услуге. Пожалуйста, выберите другой слот.']);
+            }
+
+            $phone = preg_replace('/\D+/', '', $data['phone']);
+            if (strlen($phone) < 10) {
+                throw ValidationException::withMessages(['phone' => 'Укажите корректный номер телефона.']);
             }
 
             $customer = Customer::query()->updateOrCreate(
-                ['phone' => preg_replace('/\D+/', '', $data['phone'])],
+                ['phone' => $phone],
                 ['name' => $data['name'], 'email' => $data['email'] ?? null, 'source' => 'site']
             );
 
