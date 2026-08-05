@@ -1,5 +1,9 @@
 @extends('layouts.app')
 @section('title', $album->title.' — Фотогалерея')
+@section('seo_title', $album->title.' — Фотогалерея '.$site['site_name'])
+@section('seo_description', $album->description ?: 'Фотографии комплекса '.$site['site_name'])
+@php($seoCover = $album->cover_path ?: optional($album->photos->first())->image_path)
+@if($seoCover) @section('seo_image', $seoCover) @endif
 @section('content')
 <section class="page-hero compact"><div class="container"><a href="{{ route('gallery.index') }}" class="back-link text-white"><i class="bi bi-arrow-left"></i> Все альбомы</a><h1>{{ $album->title }}</h1><p>{{ $album->description }}</p></div></section><section class="section-padding"><div class="container"><div class="gallery-grid">@foreach ($album->photos as $photo)<button class="gallery-photo" type="button" data-bs-toggle="modal" data-bs-target="#photoModal" data-image="{{ Storage::url($photo->image_path) }}" data-title="{{ $photo->title }}" data-caption="{{ $photo->caption }}"><img src="{{ Storage::url($photo->image_path) }}" alt="{{ $photo->title ?: $album->title }}"><span><i class="bi bi-arrows-fullscreen"></i></span></button>@endforeach</div></div></section><div class="modal fade" id="photoModal" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content bg-dark"><div class="modal-header border-0"><div><h5 class="modal-title text-white"></h5><p class="modal-caption text-white-50 mb-0"></p></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body text-center pt-0"><img class="img-fluid rounded-3" id="modalPhoto" alt=""></div></div></div></div>
 @endsection
