@@ -43,11 +43,11 @@ class DirectorDashboardController extends Controller
         $leadsWon = Lead::query()->whereBetween('created_at',[$monthStart,$monthEnd])->where('status','won')->count();
         $leadConversion = $leadsTotal ? round($leadsWon / $leadsTotal * 100, 1) : 0;
 
-        $dailyOrders = Order::query()->where('payment_status','paid')->where('paid_at','>=',now()->subDays(29)->startOfDay())->get(['paid_at','total']);
+        $dailyOrders = Order::query()->where('payment_status','paid')->where('paid_at','>=',today()->subDays(29)->startOfDay())->get(['paid_at','total']);
         $dailyRevenue = collect(range(29,0))->map(function($daysAgo) use ($dailyOrders){
             $date = today()->subDays($daysAgo);
             return ['date'=>$date->format('d.m'),'value'=>(float)$dailyOrders->filter(fn($o)=>$o->paid_at?->isSameDay($date))->sum('total')];
-        })->push(['date'=>today()->format('d.m'),'value'=>(float)$dailyOrders->filter(fn($o)=>$o->paid_at?->isToday())->sum('total')]);
+        });
 
         $elapsedDays = max(1, now()->day);
         $daysInMonth = now()->daysInMonth;
