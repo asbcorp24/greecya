@@ -37,6 +37,13 @@
     <meta name="twitter:description" content="{{ $ogDescription }}">
     @if($ogImage)<meta name="twitter:image" content="{{ $ogImage }}">@endif
     @if(!empty($site['favicon']))<link rel="icon" href="{{ Storage::url($site['favicon']) }}">@endif
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+    <meta name="theme-color" content="#0b5ed7">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ $site['site_short_name'] }}">
+    <link rel="apple-touch-icon" href="{{ asset('icons/pwa-192.svg') }}">
     @if($seoPage?->schema_json)<script type="application/ld+json">{!! $seoPage->schema_json !!}</script>@endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -66,7 +73,7 @@
                 <li class="nav-item"><a class="nav-link" href="{{ route('catalog.index') }}">Билеты</a></li>
                 <li class="nav-item"><a class="nav-link phone-link" href="tel:{{ $phoneHref }}"><i class="bi bi-telephone"></i> {{ $site['phone'] }}</a></li>
                 @auth
-                    <li class="nav-item ms-xl-1"><a class="btn btn-outline-primary rounded-pill px-3" href="{{ auth()->user()->role === 'customer' ? route('account.dashboard') : route('admin.dashboard') }}"><i class="bi bi-person-circle me-1"></i> Кабинет</a></li>
+                    <li class="nav-item ms-xl-1"><a class="btn btn-outline-primary rounded-pill px-3" href="{{ auth()->user()->role === 'customer' ? route('account.dashboard') : (auth()->user()->role === 'director' ? route('admin.director.dashboard') : route('admin.dashboard')) }}"><i class="bi bi-person-circle me-1"></i> Кабинет</a></li>
                 @else
                     <li class="nav-item ms-xl-1"><a class="nav-link" href="{{ route('login') }}">Войти</a></li>
                 @endauth
@@ -108,6 +115,7 @@
     </div>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('{{ asset('sw.js') }}').catch(()=>{}));}</script>
 @stack('scripts')
 </body>
 </html>
