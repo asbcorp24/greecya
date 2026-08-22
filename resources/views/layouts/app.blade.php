@@ -73,6 +73,7 @@
                 <li class="nav-item"><a class="nav-link" href="{{ route('catalog.index') }}">Билеты</a></li>
                 <li class="nav-item"><a class="nav-link phone-link" href="tel:{{ $phoneHref }}"><i class="bi bi-telephone"></i> {{ $site['phone'] }}</a></li>
                 @auth
+                    <li class="nav-item"><a class="nav-link" href="{{ route('help.index') }}"><i class="bi bi-question-circle me-1"></i>Справка</a></li>
                     <li class="nav-item ms-xl-1"><a class="btn btn-outline-primary rounded-pill px-3" href="{{ auth()->user()->role === 'customer' ? route('account.dashboard') : (auth()->user()->role === 'director' ? route('admin.director.dashboard') : route('admin.dashboard')) }}"><i class="bi bi-person-circle me-1"></i> Кабинет</a></li>
                 @else
                     <li class="nav-item ms-xl-1"><a class="nav-link" href="{{ route('login') }}">Войти</a></li>
