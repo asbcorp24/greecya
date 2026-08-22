@@ -4,40 +4,29 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class AdminMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
         $user = $request->user();
+        abort_unless($user && $user->role !== 'customer' && $user->hasPermission('crm.access'), 403);
 
-        abort_unless($user && in_array($user->role, ['admin', 'manager', 'accountant'], true), 403);
+        $routeName = (string) optional($request->route())->getName();
+        foreach (config('access.route_permissions', []) as $pattern => $rule) {
+            if (! Str::is($pattern, $routeName)) {
+                continue;
+            }
 
-        if ($user->role === 'accountant') {
-            $routeName = (string) optional($request->route())->getName();
-            $allowed = [
-                'admin.dashboard',
-                'admin.orders.index',
-                'admin.orders.update',
-                'admin.customers.index',
-                'admin.finance.index',
-                'admin.finance.registers.store',
-                'admin.finance.shifts.open',
-                'admin.finance.shifts.close',
-                'admin.finance.transactions.store',
-                'admin.staff.index',
-                'admin.staff.shifts.store',
-                'admin.staff.shifts.update',
-                'admin.staff.rules.store',
-                'admin.staff.payroll.calculate',
-                'admin.staff.payroll.pay',
-                'admin.inventory.index',
-                'admin.inventory.store',
-                'admin.inventory.movements.store',
-                'admin.reports.index',
-            ];
+            $required = is_array($rule)
+                ? ($rule[$request->method()] ?? $rule['*'] ?? null)
+                : $rule;
 
-            abort_unless(in_array($routeName, $allowed, true), 403);
+            if ($required) {
+                abort_unless($user->hasPermission($required), 403);
+            }
+            break;
         }
 
         return $next($request);
