@@ -15,7 +15,7 @@ class PoolLaneManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_delete_empty_lane(): void
+    public function test_admin_can_safe_delete_empty_lane(): void
     {
         $this->seed(DatabaseSeeder::class);
         $admin = User::where('email', 'admin@greecya.local')->firstOrFail();
@@ -46,10 +46,10 @@ class PoolLaneManagementTest extends TestCase
             ->assertRedirect()
             ->assertSessionHas('success');
 
-        $this->assertDatabaseMissing('pool_lanes', ['id' => $lane->id]);
+        $this->assertSoftDeleted('pool_lanes', ['id' => $lane->id]);
     }
 
-    public function test_lane_with_maintenance_history_cannot_be_deleted(): void
+    public function test_lane_with_maintenance_history_can_be_safe_deleted_and_history_is_preserved(): void
     {
         $this->seed(DatabaseSeeder::class);
         $admin = User::where('email', 'admin@greecya.local')->firstOrFail();
@@ -72,7 +72,7 @@ class PoolLaneManagementTest extends TestCase
             'is_active' => false,
         ]);
 
-        MaintenanceTask::create([
+        $task = MaintenanceTask::create([
             'pool_zone_id' => $zone->id,
             'pool_lane_id' => $lane->id,
             'assigned_to' => $admin->id,
@@ -82,18 +82,21 @@ class PoolLaneManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->from('/admin/pool')
             ->post('/admin/pool/lanes', [
                 'action' => 'delete',
                 'lane_id' => $lane->id,
             ])
-            ->assertRedirect('/admin/pool')
-            ->assertSessionHasErrors('lane');
+            ->assertRedirect()
+            ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('pool_lanes', ['id' => $lane->id]);
+        $this->assertSoftDeleted('pool_lanes', ['id' => $lane->id]);
+        $this->assertDatabaseHas('maintenance_tasks', [
+            'id' => $task->id,
+            'pool_lane_id' => $lane->id,
+        ]);
     }
 
-    public function test_lane_assigned_to_schedule_slot_cannot_be_deleted(): void
+    public function test_lane_assigned_to_schedule_slot_can_be_safe_deleted_without_losing_pivot_history(): void
     {
         $this->seed(DatabaseSeeder::class);
         $admin = User::where('email', 'admin@greecya.local')->firstOrFail();
@@ -113,18 +116,21 @@ class PoolLaneManagementTest extends TestCase
         $slot->lanes()->attach($lane->id, ['capacity' => 6]);
 
         $this->actingAs($admin)
-            ->from('/admin/pool')
             ->post('/admin/pool/lanes', [
                 'action' => 'delete',
                 'lane_id' => $lane->id,
             ])
-            ->assertRedirect('/admin/pool')
-            ->assertSessionHasErrors('lane');
+            ->assertRedirect()
+            ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('pool_lanes', ['id' => $lane->id]);
+        $this->assertSoftDeleted('pool_lanes', ['id' => $lane->id]);
+        $this->assertDatabaseHas('schedule_slot_lane', [
+            'schedule_slot_id' => $slot->id,
+            'pool_lane_id' => $lane->id,
+        ]);
     }
 
-    public function test_pool_page_loads_lane_delete_control(): void
+    public function test_pool_page_loads_lane_safe_delete_control(): void
     {
         $this->seed(DatabaseSeeder::class);
         $admin = User::where('email', 'admin@greecya.local')->firstOrFail();

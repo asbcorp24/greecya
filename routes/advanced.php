@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\Admin\DirectorDashboardController;
+use App\Http\Controllers\Admin\PoolController;
 use App\Http\Controllers\Admin\PricingController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,4 +18,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth','admin','audit.admin'
     Route::post('/pricing', [PricingController::class,'store'])->name('pricing.store');
     Route::patch('/pricing/{pricingRule}', [PricingController::class,'update'])->name('pricing.update');
     Route::delete('/pricing/{pricingRule}', [PricingController::class,'destroy'])->name('pricing.destroy');
+
+    Route::get('/pool/archive', [PoolController::class,'archive'])->name('pool.archive');
 });

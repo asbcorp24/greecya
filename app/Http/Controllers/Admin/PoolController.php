@@ -38,28 +38,90 @@ class PoolController extends Controller
         ]);
     }
 
+    public function archive(Request $request)
+    {
+        $this->ensureStructureAdmin($request);
+
+        return view('admin.pool.archive', [
+            'archivedZones' => PoolZone::onlyTrashed()
+                ->with([
+                    'deletedBy',
+                    'lanesWithTrashed' => fn ($query) => $query->with('deletedBy')->orderBy('number'),
+                ])
+                ->orderByDesc('deleted_at')
+                ->get(),
+            'archivedLanes' => PoolLane::onlyTrashed()
+                ->where('deleted_with_zone', false)
+                ->with(['zone', 'deletedBy'])
+                ->orderByDesc('deleted_at')
+                ->get(),
+        ]);
+    }
+
     public function storeZone(Request $request)
     {
         $action = $request->input('action', 'create');
 
         if ($action === 'delete') {
+            $this->ensureStructureAdmin($request);
+
             $data = $request->validate([
                 'zone_id' => ['required', 'integer', 'exists:pool_zones,id'],
             ]);
 
             $zone = PoolZone::findOrFail($data['zone_id']);
-            $blockers = $this->zoneDeleteBlockers($zone);
-
-            if ($blockers !== []) {
-                return back()->withErrors([
-                    'zone' => 'Удаление «'.$zone->name.'» запрещено: есть связанные данные ('.implode(', ', $blockers).'). Отключите бассейн вместо удаления, чтобы сохранить историю.',
-                ]);
-            }
-
             $name = $zone->name;
-            $zone->delete();
+            $userId = $request->user()->id;
 
-            return back()->with('success', 'Бассейн / зона «'.$name.'» удалён.');
+            DB::transaction(function () use ($zone, $userId) {
+                PoolLane::where('pool_zone_id', $zone->id)->update([
+                    'is_active' => false,
+                    'status' => 'closed',
+                    'deleted_by_user_id' => $userId,
+                    'deleted_with_zone' => true,
+                    'deleted_at' => now(),
+                ]);
+
+                $zone->update([
+                    'is_active' => false,
+                    'deleted_by_user_id' => $userId,
+                ]);
+                $zone->delete();
+            });
+
+            return back()->with('success', 'Бассейн / зона «'.$name.'» безопасно удалён в архив. Все связанные данные сохранены.');
+        }
+
+        if ($action === 'restore') {
+            $this->ensureStructureAdmin($request);
+
+            $data = $request->validate([
+                'zone_id' => ['required', 'integer', 'exists:pool_zones,id'],
+            ]);
+
+            $zone = PoolZone::onlyTrashed()->findOrFail($data['zone_id']);
+            $name = $zone->name;
+
+            DB::transaction(function () use ($zone) {
+                $zone->restore();
+                $zone->update([
+                    'is_active' => false,
+                    'deleted_by_user_id' => null,
+                ]);
+
+                PoolLane::onlyTrashed()
+                    ->where('pool_zone_id', $zone->id)
+                    ->where('deleted_with_zone', true)
+                    ->update([
+                        'deleted_at' => null,
+                        'deleted_by_user_id' => null,
+                        'deleted_with_zone' => false,
+                        'is_active' => false,
+                        'status' => 'closed',
+                    ]);
+            });
+
+            return back()->with('success', 'Бассейн / зона «'.$name.'» восстановлен. Для безопасности он и восстановленные дорожки оставлены выключенными/закрытыми.');
         }
 
         if ($action === 'update') {
@@ -92,60 +154,64 @@ class PoolController extends Controller
         return back()->with('success', 'Бассейн / зона создан.');
     }
 
-    private function zoneDeleteBlockers(PoolZone $zone): array
-    {
-        $checks = [
-            'дорожки' => fn () => $zone->lanes()->exists(),
-            'сеансы' => fn () => $zone->slots()->exists(),
-            'замеры воды' => fn () => $zone->waterLogs()->exists(),
-            'техобслуживание' => fn () => DB::table('maintenance_tasks')->where('pool_zone_id', $zone->id)->exists(),
-            'проходы СКУД' => fn () => DB::table('access_events')->where('pool_zone_id', $zone->id)->exists(),
-            'эксплуатационные операции' => fn () => DB::table('pool_operations')->where('pool_zone_id', $zone->id)->exists(),
-            'предупреждения по воде' => fn () => DB::table('pool_alerts')->where('pool_zone_id', $zone->id)->exists(),
-            'нормативы воды' => fn () => DB::table('pool_norms')->where('pool_zone_id', $zone->id)->exists(),
-            'технические чек-листы' => fn () => DB::table('technical_checklists')->where('pool_zone_id', $zone->id)->exists(),
-            'инциденты' => fn () => DB::table('safety_incidents')->where('pool_zone_id', $zone->id)->exists(),
-            'расход реагентов' => fn () => DB::table('chemical_usages')->where('pool_zone_id', $zone->id)->exists(),
-            'складские движения' => fn () => DB::table('inventory_movements')->where('pool_zone_id', $zone->id)->exists(),
-        ];
-
-        $blockers = [];
-        foreach ($checks as $label => $check) {
-            if ($check()) {
-                $blockers[] = $label;
-            }
-        }
-
-        return $blockers;
-    }
-
     public function storeLane(Request $request)
     {
         $action = $request->input('action', 'create');
 
         if ($action === 'delete') {
+            $this->ensureStructureAdmin($request);
+
             $data = $request->validate([
                 'lane_id' => ['required', 'integer', 'exists:pool_lanes,id'],
             ]);
 
             $lane = PoolLane::with('zone')->findOrFail($data['lane_id']);
-            $blockers = $this->laneDeleteBlockers($lane);
+            $name = $lane->name;
+            $zoneName = $lane->zone?->name;
 
-            if ($blockers !== []) {
+            $lane->update([
+                'is_active' => false,
+                'status' => 'closed',
+                'deleted_by_user_id' => $request->user()->id,
+                'deleted_with_zone' => false,
+            ]);
+            $lane->delete();
+
+            return back()->with('success', 'Дорожка «'.$name.'»'.($zoneName ? ' бассейна «'.$zoneName.'»' : '').' безопасно удалена в архив. Все связи сохранены.');
+        }
+
+        if ($action === 'restore') {
+            $this->ensureStructureAdmin($request);
+
+            $data = $request->validate([
+                'lane_id' => ['required', 'integer', 'exists:pool_lanes,id'],
+            ]);
+
+            $lane = PoolLane::onlyTrashed()->with('zone')->findOrFail($data['lane_id']);
+
+            if (!$lane->zone || $lane->zone->trashed()) {
                 return back()->withErrors([
-                    'lane' => 'Удаление дорожки «'.$lane->name.'» запрещено: есть связанные данные ('.implode(', ', $blockers).'). Отключите дорожку или переведите её в статус «Закрыта», чтобы сохранить историю.',
+                    'lane' => 'Сначала восстановите бассейн, к которому относится дорожка «'.$lane->name.'».',
                 ]);
             }
 
             $name = $lane->name;
-            $zoneName = $lane->zone?->name;
-            $lane->delete();
+            $lane->restore();
+            $lane->update([
+                'is_active' => false,
+                'status' => 'closed',
+                'deleted_by_user_id' => null,
+                'deleted_with_zone' => false,
+            ]);
 
-            return back()->with('success', 'Дорожка «'.$name.'»'.($zoneName ? ' бассейна «'.$zoneName.'»' : '').' удалена.');
+            return back()->with('success', 'Дорожка «'.$name.'» восстановлена в закрытом и неактивном состоянии.');
         }
 
         $data = $request->validate([
-            'pool_zone_id' => 'required|exists:pool_zones,id',
+            'pool_zone_id' => [
+                'required',
+                Rule::exists('pool_zones', 'id')->whereNull('deleted_at'),
+            ],
             'name' => 'required|string|max:100',
             'number' => 'required|integer|min:1|max:100',
             'length_meters' => 'required|numeric|min:1|max:100',
@@ -157,27 +223,6 @@ class PoolController extends Controller
         PoolLane::create($data);
 
         return back()->with('success', 'Дорожка добавлена.');
-    }
-
-    private function laneDeleteBlockers(PoolLane $lane): array
-    {
-        $checks = [
-            'назначения на сеансы' => fn () => DB::table('schedule_slot_lane')->where('pool_lane_id', $lane->id)->exists(),
-            'техобслуживание' => fn () => DB::table('maintenance_tasks')->where('pool_lane_id', $lane->id)->exists(),
-            'эксплуатационные операции' => fn () => DB::table('pool_operations')->where('pool_lane_id', $lane->id)->exists(),
-            'инциденты' => fn () => DB::table('safety_incidents')->where('pool_lane_id', $lane->id)->exists(),
-            'группы школы плавания' => fn () => DB::table('swim_groups')->where('pool_lane_id', $lane->id)->exists(),
-            'занятия школы плавания' => fn () => DB::table('swim_group_sessions')->where('pool_lane_id', $lane->id)->exists(),
-        ];
-
-        $blockers = [];
-        foreach ($checks as $label => $check) {
-            if ($check()) {
-                $blockers[] = $label;
-            }
-        }
-
-        return $blockers;
     }
 
     public function updateLane(Request $request, PoolLane $lane)
@@ -195,7 +240,10 @@ class PoolController extends Controller
     public function assignLane(Request $request, ScheduleSlot $slot)
     {
         $data = $request->validate([
-            'pool_lane_id' => 'required|exists:pool_lanes,id',
+            'pool_lane_id' => [
+                'required',
+                Rule::exists('pool_lanes', 'id')->whereNull('deleted_at'),
+            ],
             'capacity' => 'nullable|integer|min:1|max:100',
         ]);
 
@@ -271,7 +319,10 @@ class PoolController extends Controller
     public function storeWater(Request $request, PoolMonitoringService $monitoring)
     {
         $data = $request->validate([
-            'pool_zone_id' => 'required|exists:pool_zones,id',
+            'pool_zone_id' => [
+                'required',
+                Rule::exists('pool_zones', 'id')->whereNull('deleted_at'),
+            ],
             'measured_at' => 'required|date',
             'temperature' => 'nullable|numeric|min:0|max:50',
             'ph' => 'nullable|numeric|min:0|max:14',
@@ -289,8 +340,14 @@ class PoolController extends Controller
     public function storeMaintenance(Request $request)
     {
         $data = $request->validate([
-            'pool_zone_id' => 'nullable|exists:pool_zones,id',
-            'pool_lane_id' => 'nullable|exists:pool_lanes,id',
+            'pool_zone_id' => [
+                'nullable',
+                Rule::exists('pool_zones', 'id')->whereNull('deleted_at'),
+            ],
+            'pool_lane_id' => [
+                'nullable',
+                Rule::exists('pool_lanes', 'id')->whereNull('deleted_at'),
+            ],
             'title' => 'required|string|max:190',
             'type' => 'required|string|max:80',
             'due_at' => 'nullable|date',
@@ -316,5 +373,14 @@ class PoolController extends Controller
         $task->update($data);
 
         return back()->with('success', 'Задача обновлена.');
+    }
+
+    private function ensureStructureAdmin(Request $request): void
+    {
+        abort_unless(
+            $request->user()?->role === 'admin',
+            403,
+            'Удаление и восстановление бассейнов и дорожек доступно только администратору.'
+        );
     }
 }

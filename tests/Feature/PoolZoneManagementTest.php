@@ -13,7 +13,7 @@ class PoolZoneManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_create_update_disable_and_delete_empty_pool_zone(): void
+    public function test_admin_can_create_update_disable_and_safe_delete_pool_zone(): void
     {
         $this->seed(DatabaseSeeder::class);
         $admin = User::where('email', 'admin@greecya.local')->firstOrFail();
@@ -56,10 +56,10 @@ class PoolZoneManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertDatabaseMissing('pool_zones', ['id' => $zone->id]);
+        $this->assertSoftDeleted('pool_zones', ['id' => $zone->id]);
     }
 
-    public function test_pool_zone_with_lanes_cannot_be_deleted(): void
+    public function test_pool_zone_with_lanes_is_safe_deleted_together_with_lanes(): void
     {
         $this->seed(DatabaseSeeder::class);
         $admin = User::where('email', 'admin@greecya.local')->firstOrFail();
@@ -72,7 +72,7 @@ class PoolZoneManagementTest extends TestCase
             'is_active' => true,
         ]);
 
-        PoolLane::create([
+        $lane = PoolLane::create([
             'pool_zone_id' => $zone->id,
             'name' => 'Дорожка 1',
             'number' => 1,
@@ -83,15 +83,21 @@ class PoolZoneManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->from('/admin/pool')
             ->post('/admin/pool/zones', [
                 'action' => 'delete',
                 'zone_id' => $zone->id,
             ])
-            ->assertRedirect('/admin/pool')
-            ->assertSessionHasErrors('zone');
+            ->assertRedirect()
+            ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('pool_zones', ['id' => $zone->id]);
+        $this->assertSoftDeleted('pool_zones', ['id' => $zone->id]);
+        $this->assertSoftDeleted('pool_lanes', ['id' => $lane->id]);
+        $this->assertDatabaseHas('pool_lanes', [
+            'id' => $lane->id,
+            'deleted_with_zone' => 1,
+            'status' => 'closed',
+            'is_active' => 0,
+        ]);
     }
 
     public function test_pool_page_shows_zone_management_controls(): void
