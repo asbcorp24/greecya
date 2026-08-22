@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\NewsController as AdminNewsController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ScheduleController as AdminScheduleController;
+use App\Http\Controllers\Admin\SeoController as AdminSeoController;
+use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\TrainerController as AdminTrainerController;
 use App\Http\Controllers\Admin\TrainingPlanController as AdminTrainingPlanController;
 use App\Http\Controllers\AuthController;
@@ -24,6 +26,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\SeoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -43,6 +46,9 @@ Route::post('/request-call', [LeadController::class, 'store'])->name('lead.store
 Route::get('/tickets', CatalogController::class)->name('catalog.index');
 Route::post('/orders', [OrderController::class, 'store'])->name('order.store')->middleware('throttle:10,1');
 Route::get('/orders/success/{order}', [OrderController::class, 'success'])->name('order.success');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'create'])->name('login');
     Route::post('/login', [AuthController::class, 'store'])->name('login.store');
@@ -50,11 +56,13 @@ Route::middleware('guest')->group(function () {
     Route::post('/account/register', [AccountAuthController::class, 'store'])->name('account.register.store');
 });
 Route::post('/logout', [AuthController::class, 'destroy'])->middleware('auth')->name('logout');
+
 Route::prefix('account')->name('account.')->middleware(['auth', 'customer'])->group(function () {
     Route::get('/', [AccountController::class, 'dashboard'])->name('dashboard');
     Route::patch('/profile', [AccountController::class, 'updateProfile'])->name('profile.update');
     Route::post('/progress', [AccountController::class, 'storeProgress'])->name('progress.store');
 });
+
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::get('/bookings', [AdminBookingController::class, 'index'])->name('bookings.index');
@@ -101,4 +109,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('/training-plans/{plan}/items', [AdminTrainingPlanController::class, 'storeItem'])->name('training-plans.items.store');
     Route::delete('/training-plan-items/{item}', [AdminTrainingPlanController::class, 'destroyItem'])->name('training-plans.items.destroy');
     Route::post('/training-plans/{plan}/progress', [AdminTrainingPlanController::class, 'storeProgress'])->name('training-plans.progress.store');
+
+    Route::get('/settings', [AdminSettingsController::class, 'general'])->name('settings.general');
+    Route::patch('/settings', [AdminSettingsController::class, 'updateGeneral'])->name('settings.general.update');
+    Route::get('/settings/contacts', [AdminSettingsController::class, 'contacts'])->name('settings.contacts');
+    Route::patch('/settings/contacts', [AdminSettingsController::class, 'updateContacts'])->name('settings.contacts.update');
+    Route::get('/seo', [AdminSeoController::class, 'index'])->name('seo.index');
+    Route::post('/seo', [AdminSeoController::class, 'store'])->name('seo.store');
+    Route::patch('/seo/{seoPage}', [AdminSeoController::class, 'update'])->name('seo.update');
+    Route::delete('/seo/{seoPage}', [AdminSeoController::class, 'destroy'])->name('seo.destroy');
 });

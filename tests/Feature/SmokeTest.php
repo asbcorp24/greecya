@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\Certificate;
 use App\Models\Customer;
 use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -16,13 +18,17 @@ class SmokeTest extends TestCase
 
     public function test_public_pages_are_available(): void
     {
-        foreach(['/','/booking','/tickets','/news','/gallery','/privacy','/login','/account/register'] as $url) $this->get($url)->assertOk();
+        foreach(['/','/booking','/tickets','/news','/gallery','/privacy','/login','/account/register','/sitemap.xml','/robots.txt'] as $url) {
+            $this->get($url)->assertOk();
+        }
     }
 
-    public function test_admin_content_sections_are_rendered(): void
+    public function test_admin_sections_are_rendered(): void
     {
         $admin=User::query()->create(['name'=>'Тестовый администратор','email'=>'admin-test@example.com','role'=>'admin','password'=>Hash::make('TestPassword123!')]);
-        foreach(['/admin','/admin/news','/admin/gallery','/admin/slides','/admin/trainers','/admin/certificates','/admin/certificates/scan','/admin/training-plans'] as $url) $this->actingAs($admin)->get($url)->assertOk();
+        foreach(['/admin','/admin/news','/admin/gallery','/admin/slides','/admin/trainers','/admin/certificates','/admin/certificates/scan','/admin/training-plans','/admin/settings','/admin/settings/contacts','/admin/seo'] as $url) {
+            $this->actingAs($admin)->get($url)->assertOk();
+        }
     }
 
     public function test_customer_account_is_rendered(): void
@@ -37,6 +43,16 @@ class SmokeTest extends TestCase
         $certificate=Certificate::create(['serial'=>'GC-TEST-001','token'=>Str::random(48),'recipient_name'=>'Тестовый получатель','amount'=>3000,'status'=>'active','valid_from'=>today(),'valid_until'=>now()->addMonth()->toDateString()]);
         $this->get(route('certificate.verify',$certificate))->assertOk()->assertSee('GC-TEST-001');
         $this->get(route('certificate.print',$certificate))->assertOk()->assertSee('Подарочный сертификат');
+    }
+
+    public function test_full_seeder_is_idempotent(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $tables=['site_settings','seo_pages','services','trainers','schedule_slots','products','hero_slides','news_posts','gallery_albums','gallery_photos','customers','leads','bookings','orders','order_items','payments','certificates','visits','training_plans','training_plan_items','training_progress_entries'];
+        $first=collect($tables)->mapWithKeys(fn($table)=>[$table=>DB::table($table)->count()])->all();
+        $this->seed(DatabaseSeeder::class);
+        $second=collect($tables)->mapWithKeys(fn($table)=>[$table=>DB::table($table)->count()])->all();
+        $this->assertSame($first,$second);
     }
 
     public function test_health_endpoint_is_available(): void
