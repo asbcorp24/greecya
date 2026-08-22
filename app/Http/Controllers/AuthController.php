@@ -16,6 +16,7 @@ class AuthController extends Controller
         $request->session()->regenerate();$user=$request->user();
         $route=match($user->role){
             'customer'=>'account.dashboard',
+            'director'=>'admin.director.dashboard',
             'accountant'=>'admin.finance.index',
             'cashier','receptionist'=>'reception.index',
             'trainer'=>'coach.index',
