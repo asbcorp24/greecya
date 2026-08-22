@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Booking;
 use App\Models\Customer;
+use App\Models\PoolZone;
 use App\Models\ScheduleSlot;
 use App\Models\Service;
 use App\Services\DynamicPricingService;
@@ -37,6 +38,16 @@ class BookingController extends Controller
             ->where('starts_at', '>', now())
             ->where('status', 'open')
             ->whereColumn('booked_count', '<', 'capacity')
+            ->where(function ($query) {
+                $query->whereNull('pool_zone_id')
+                    ->orWhereExists(function ($subquery) {
+                        $subquery->selectRaw('1')
+                            ->from('pool_zones')
+                            ->whereColumn('pool_zones.id', 'schedule_slots.pool_zone_id')
+                            ->whereNull('pool_zones.deleted_at')
+                            ->where('pool_zones.is_active', true);
+                    });
+            })
             ->orderBy('starts_at')
             ->get()
             ->map(function (ScheduleSlot $slot) use ($pricing, $customer) {
@@ -73,8 +84,14 @@ class BookingController extends Controller
         $booking = DB::transaction(function () use ($data, $pricing) {
             $slot = ScheduleSlot::query()->with('service')->lockForUpdate()->findOrFail($data['schedule_slot_id']);
 
-            if ((int) $data['service_id'] !== $slot->service_id || $slot->status !== 'open' || $slot->starts_at->isPast() || $slot->available_places < $data['people']) {
-                throw ValidationException::withMessages(['schedule_slot_id' => 'Выбранное время уже занято или не относится к выбранной услуге. Пожалуйста, выберите другой слот.']);
+            $poolAvailable = !$slot->pool_zone_id
+                || PoolZone::query()
+                    ->whereKey($slot->pool_zone_id)
+                    ->where('is_active', true)
+                    ->exists();
+
+            if ((int) $data['service_id'] !== $slot->service_id || !$poolAvailable || $slot->status !== 'open' || $slot->starts_at->isPast() || $slot->available_places < $data['people']) {
+                throw ValidationException::withMessages(['schedule_slot_id' => 'Выбранное время уже занято, бассейн недоступен или слот не относится к выбранной услуге. Пожалуйста, выберите другое время.']);
             }
 
             $phone = preg_replace('/\D+/', '', $data['phone']);
