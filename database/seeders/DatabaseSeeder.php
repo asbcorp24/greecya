@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             ContentSeeder::class,
             CrmSeeder::class,
             TrainingSeeder::class,
+            PoolCrmSeeder::class,
         ]);
     }
 }

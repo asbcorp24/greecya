@@ -2,7 +2,11 @@ name: Laravel CI
 
 on:
   push:
-    branches: [main, feature/mvp-pool-spa-crm]
+    branches:
+      - main
+      - feature/mvp-pool-spa-crm
+      - feature/settings-seo-seeders
+      - feature/pool-crm-suite
   pull_request:
     branches: [main]
 
