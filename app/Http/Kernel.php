@@ -31,6 +31,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'audit.admin' => \App\Http\Middleware\AuditAdminActions::class,
         'customer' => \App\Http\Middleware\CustomerMiddleware::class,
     ];
 }
