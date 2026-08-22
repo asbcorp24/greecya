@@ -9,12 +9,10 @@ class Visit extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['customer_id', 'booking_id', 'order_item_id', 'visited_at', 'guests', 'source', 'notes'];
-
+    protected $fillable = ['customer_id', 'booking_id', 'membership_id', 'order_item_id', 'visited_at', 'guests', 'source', 'notes'];
     protected $casts = ['visited_at' => 'datetime'];
 
-    public function customer()
-    {
-        return $this->belongsTo(Customer::class);
-    }
+    public function customer(){ return $this->belongsTo(Customer::class); }
+    public function membership(){ return $this->belongsTo(Membership::class); }
+    public function booking(){ return $this->belongsTo(Booking::class); }
 }

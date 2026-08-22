@@ -1,13 +1,13 @@
 @extends('layouts.app')
 @section('title', 'Онлайн-запись — Комплекс Греция')
 @section('content')
-<section class="page-hero"><div class="container"><div class="eyebrow">Онлайн-запись</div><h1>Выберите удобное время</h1><p>Система покажет свободные места на выбранную дату.</p></div></section>
+<section class="page-hero"><div class="container"><div class="eyebrow">Онлайн-запись</div><h1>Выберите удобное время</h1><p>Система покажет свободные места и актуальную цену для каждого слота.</p></div></section>
 <section class="section-padding pt-4"><div class="container"><div class="booking-shell"><div class="row g-0">
-    <div class="col-lg-5 booking-sidebar"><span class="booking-number">01</span><h2>Услуга и время</h2><p>Выберите услугу, дату и свободный слот. Для записи к тренеру его имя будет указано рядом со временем.</p><div class="booking-benefit"><i class="bi bi-check2-circle"></i><span>Только актуальные свободные места</span></div><div class="booking-benefit"><i class="bi bi-check2-circle"></i><span>Без предоплаты в демо-режиме</span></div><div class="booking-benefit"><i class="bi bi-check2-circle"></i><span>Подтверждение администратором</span></div></div>
+    <div class="col-lg-5 booking-sidebar"><span class="booking-number">01</span><h2>Услуга и время</h2><p>Цена может отличаться утром, вечером, в выходные, при низкой загрузке и для льготных категорий.</p><div class="booking-benefit"><i class="bi bi-check2-circle"></i><span>Только актуальные свободные места</span></div><div class="booking-benefit"><i class="bi bi-check2-circle"></i><span>Динамическая цена фиксируется при записи</span></div><div class="booking-benefit"><i class="bi bi-check2-circle"></i><span>Подтверждение администратором</span></div></div>
     <div class="col-lg-7 p-4 p-xl-5">
         <form method="post" action="{{ route('booking.store') }}" id="bookingForm">@csrf
             <div class="row g-4">
-                <div class="col-md-7"><label class="form-label">Услуга</label><select class="form-select form-select-lg" id="serviceSelect" name="service_id" required><option value="">Выберите услугу</option>@foreach($services as $service)<option value="{{ $service->id }}" @selected(old('service_id', $selectedService) == $service->id)>{{ $service->name }} — {{ number_format($service->price, 0, ',', ' ') }} ₽</option>@endforeach</select></div>
+                <div class="col-md-7"><label class="form-label">Услуга</label><select class="form-select form-select-lg" id="serviceSelect" name="service_id" required><option value="">Выберите услугу</option>@foreach($services as $service)<option value="{{ $service->id }}" @selected(old('service_id', $selectedService) == $service->id)>{{ $service->name }} — от {{ number_format($service->price, 0, ',', ' ') }} ₽</option>@endforeach</select></div>
                 <div class="col-md-5"><label class="form-label">Дата</label><input type="date" class="form-control form-control-lg" id="bookingDate" name="date" min="{{ now()->toDateString() }}" value="{{ old('date', now()->addDay()->toDateString()) }}" required></div>
                 <div class="col-12"><label class="form-label d-flex justify-content-between"><span>Свободное время</span><small class="text-muted" id="slotHint">Сначала выберите услугу и дату</small></label><div id="slotsContainer" class="slots-grid"><div class="slot-empty"><i class="bi bi-calendar2-week"></i><span>Здесь появятся доступные часы</span></div></div><input type="hidden" name="schedule_slot_id" id="slotInput" value="{{ old('schedule_slot_id') }}"></div>
                 <div class="col-12"><hr><h4 class="mb-1">Контактные данные</h4><p class="text-muted">Нужны для подтверждения записи.</p></div>
@@ -33,12 +33,11 @@
     const input = document.getElementById('slotInput');
     const submit = document.getElementById('bookingSubmit');
     const endpoint = @json(route('booking.slots'));
-
     const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
+    const money = value => new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(value)+' ₽';
 
     async function loadSlots() {
-        input.value = '';
-        submit.disabled = true;
+        input.value = ''; submit.disabled = true;
         if (!service.value || !date.value) return;
         container.innerHTML = '<div class="slot-empty"><span class="spinner-border spinner-border-sm"></span><span>Проверяем расписание…</span></div>';
         hint.textContent = 'Загрузка';
@@ -46,24 +45,13 @@
             const response = await fetch(`${endpoint}?service_id=${encodeURIComponent(service.value)}&date=${encodeURIComponent(date.value)}`, {headers: {'Accept': 'application/json'}});
             if (!response.ok) throw new Error('Не удалось загрузить расписание');
             const slots = await response.json();
-            if (!slots.length) {
-                container.innerHTML = '<div class="slot-empty"><i class="bi bi-calendar-x"></i><span>На эту дату свободного времени нет. Выберите другой день.</span></div>';
-                hint.textContent = 'Нет мест';
-                return;
-            }
+            if (!slots.length) { container.innerHTML = '<div class="slot-empty"><i class="bi bi-calendar-x"></i><span>На эту дату свободного времени нет. Выберите другой день.</span></div>'; hint.textContent = 'Нет мест'; return; }
             hint.textContent = `Доступно: ${slots.length}`;
-            container.innerHTML = slots.map(slot => `<button type="button" class="slot-button" data-slot="${slot.id}"><strong>${escapeHtml(slot.time)}</strong><small>до ${escapeHtml(slot.ends_at)} · мест: ${slot.places}</small>${slot.trainer ? `<span>${escapeHtml(slot.trainer)}</span>` : ''}</button>`).join('');
-            container.querySelectorAll('.slot-button').forEach(button => button.addEventListener('click', () => {
-                container.querySelectorAll('.slot-button').forEach(item => item.classList.remove('active'));
-                button.classList.add('active'); input.value = button.dataset.slot; submit.disabled = false;
-            }));
-        } catch (error) {
-            container.innerHTML = `<div class="slot-empty text-danger"><i class="bi bi-exclamation-circle"></i><span>${escapeHtml(error.message)}</span></div>`;
-            hint.textContent = 'Ошибка';
-        }
+            container.innerHTML = slots.map(slot => { const changed = Number(slot.price)!==Number(slot.base_price); const rules=(slot.pricing_rules||[]).map(escapeHtml).join(' · '); return `<button type="button" class="slot-button" data-slot="${slot.id}"><strong>${escapeHtml(slot.time)} · ${money(slot.price)}</strong><small>до ${escapeHtml(slot.ends_at)} · мест: ${slot.places}${changed ? ` · <s>${money(slot.base_price)}</s>` : ''}</small>${slot.trainer ? `<span>${escapeHtml(slot.trainer)}</span>` : ''}${rules ? `<span class="text-success">${rules}</span>` : ''}</button>`; }).join('');
+            container.querySelectorAll('.slot-button').forEach(button => button.addEventListener('click', () => { container.querySelectorAll('.slot-button').forEach(item => item.classList.remove('active')); button.classList.add('active'); input.value = button.dataset.slot; submit.disabled = false; }));
+        } catch (error) { container.innerHTML = `<div class="slot-empty text-danger"><i class="bi bi-exclamation-circle"></i><span>${escapeHtml(error.message)}</span></div>`; hint.textContent = 'Ошибка'; }
     }
-    service.addEventListener('change', loadSlots); date.addEventListener('change', loadSlots);
-    if (service.value && date.value) loadSlots();
+    service.addEventListener('change', loadSlots); date.addEventListener('change', loadSlots); if (service.value && date.value) loadSlots();
 })();
 </script>
 @endpush

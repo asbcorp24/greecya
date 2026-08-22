@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\ScheduleSlot;
 use App\Models\Service;
+use App\Services\DynamicPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,15 +22,16 @@ class BookingController extends Controller
         ]);
     }
 
-    public function slots(Request $request)
+    public function slots(Request $request, DynamicPricingService $pricing)
     {
         $data = $request->validate([
             'service_id' => ['required', 'exists:services,id'],
             'date' => ['required', 'date', 'after_or_equal:today'],
         ]);
+        $customer = $request->user()?->role === 'customer' ? $request->user()->customer : null;
 
         $slots = ScheduleSlot::query()
-            ->with('trainer:id,name,specialization')
+            ->with(['trainer:id,name,specialization','service:id,price'])
             ->where('service_id', $data['service_id'])
             ->whereDate('starts_at', $data['date'])
             ->where('starts_at', '>', now())
@@ -37,18 +39,24 @@ class BookingController extends Controller
             ->whereColumn('booked_count', '<', 'capacity')
             ->orderBy('starts_at')
             ->get()
-            ->map(fn (ScheduleSlot $slot) => [
-                'id' => $slot->id,
-                'time' => $slot->starts_at->format('H:i'),
-                'ends_at' => $slot->ends_at->format('H:i'),
-                'places' => $slot->available_places,
-                'trainer' => $slot->trainer?->name,
-            ]);
+            ->map(function (ScheduleSlot $slot) use ($pricing, $customer) {
+                $quote = $pricing->forService($slot->service, $slot, $customer);
+                return [
+                    'id' => $slot->id,
+                    'time' => $slot->starts_at->format('H:i'),
+                    'ends_at' => $slot->ends_at->format('H:i'),
+                    'places' => $slot->available_places,
+                    'trainer' => $slot->trainer?->name,
+                    'base_price' => $quote['base'],
+                    'price' => $quote['price'],
+                    'pricing_rules' => collect($quote['rules'])->pluck('name')->values(),
+                ];
+            });
 
         return response()->json($slots);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, DynamicPricingService $pricing)
     {
         $data = $request->validate([
             'service_id' => ['required', 'exists:services,id'],
@@ -62,7 +70,7 @@ class BookingController extends Controller
             'privacy' => ['accepted'],
         ]);
 
-        $booking = DB::transaction(function () use ($data) {
+        $booking = DB::transaction(function () use ($data, $pricing) {
             $slot = ScheduleSlot::query()->with('service')->lockForUpdate()->findOrFail($data['schedule_slot_id']);
 
             if ((int) $data['service_id'] !== $slot->service_id || $slot->status !== 'open' || $slot->starts_at->isPast() || $slot->available_places < $data['people']) {
@@ -78,6 +86,8 @@ class BookingController extends Controller
                 ['phone' => $phone],
                 ['name' => $data['name'], 'email' => $data['email'] ?? null, 'source' => 'site']
             );
+            $quote = $pricing->forService($slot->service, $slot, $customer);
+            $people = (int)$data['people'];
 
             $booking = Booking::query()->create([
                 'public_id' => (string) Str::uuid(),
@@ -85,16 +95,17 @@ class BookingController extends Controller
                 'service_id' => $slot->service_id,
                 'schedule_slot_id' => $slot->id,
                 'trainer_id' => $slot->trainer_id,
-                'people' => $data['people'],
-                'total' => $slot->service->price * $data['people'],
+                'people' => $people,
+                'base_total' => $quote['base'] * $people,
+                'total' => $quote['price'] * $people,
+                'pricing_meta' => $quote,
                 'status' => 'new',
                 'payment_status' => 'unpaid',
                 'comment' => $data['comment'] ?? null,
                 'source' => 'site',
             ]);
 
-            $slot->increment('booked_count', $data['people']);
-
+            $slot->increment('booked_count', $people);
             return $booking;
         });
 
