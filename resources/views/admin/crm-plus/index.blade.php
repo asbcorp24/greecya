@@ -1,10 +1,127 @@
 @extends('admin.layout')
-@section('title','CRM+') @section('heading','CRM+ и коммуникации') @section('eyebrow','Продажи, задачи, корпоративные клиенты и документы')
+@section('title','CRM+')
+@section('heading','CRM+ и коммуникации')
+@section('eyebrow','Продажи, задачи, корпоративные клиенты и документы')
 @section('content')
-<ul class="nav nav-pills crm-tabs mb-4"><li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tasks">Задачи</button></li><li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#interactions">Контакты</button></li><li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#campaigns">Рассылки</button></li><li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#corporate">Корпоративные</button></li><li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#documents">Договоры</button></li></ul>
-<div class="tab-content"><div class="tab-pane fade show active" id="tasks"><div class="row g-4"><div class="col-xl-4"><div class="admin-card p-4"><h3>Новая задача</h3><form method="post" action="{{ route('admin.crm-plus.tasks.store') }}" class="row g-2">@csrf<div class="col-12"><input class="form-control" name="title" placeholder="Позвонить по продлению" required></div><div class="col-6"><select class="form-select" name="customer_id"><option value="">Клиент</option>@foreach($customers as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach</select></div><div class="col-6"><select class="form-select" name="lead_id"><option value="">Лид</option>@foreach($leads as $l)<option value="{{ $l->id }}">{{ $l->name }}</option>@endforeach</select></div><div class="col-6"><select class="form-select" name="assigned_to"><option value="">Ответственный</option>@foreach($users as $u)<option value="{{ $u->id }}">{{ $u->name }}</option>@endforeach</select></div><div class="col-6"><select class="form-select" name="type"><option value="call">Звонок</option><option value="message">Сообщение</option><option value="meeting">Встреча</option><option value="renewal">Продление</option></select></div><div class="col-12"><input type="datetime-local" class="form-control" name="due_at"></div><div class="col-12"><textarea class="form-control" name="description" placeholder="Комментарий"></textarea></div><div class="col-12"><button class="btn btn-primary w-100">Создать задачу</button></div></form></div></div><div class="col-xl-8"><div class="admin-card p-4"><h3>Задачи менеджеров</h3>@forelse($tasks as $task)<div class="d-flex justify-content-between align-items-start border-bottom py-3"><div><span class="badge {{ $task->status==='completed'?'text-bg-success':'text-bg-warning' }}">{{ $task->type }}</span> <strong>{{ $task->title }}</strong><div class="small text-muted">{{ $task->customer?->name ?: $task->lead?->name }} · {{ $task->assignee?->name }} · {{ optional($task->due_at)->format('d.m.Y H:i') }}</div>@if($task->description)<div class="small mt-1">{{ $task->description }}</div>@endif</div>@if($task->status!=='completed')<form method="post" action="{{ route('admin.crm-plus.tasks.complete',$task) }}">@csrf<button class="btn btn-sm btn-outline-success">Готово</button></form>@endif</div>@empty<div class="text-muted">Задач нет.</div>@endforelse</div></div></div></div>
-<div class="tab-pane fade" id="interactions"><div class="row g-4"><div class="col-xl-4"><div class="admin-card p-4"><h3>Зафиксировать контакт</h3><form method="post" action="{{ route('admin.crm-plus.interactions.store') }}" class="row g-2">@csrf<div class="col-12"><select class="form-select" name="customer_id"><option value="">Клиент</option>@foreach($customers as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach</select></div><div class="col-6"><select class="form-select" name="channel"><option value="phone">Телефон</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="email">Email</option><option value="visit">Визит</option></select></div><div class="col-6"><select class="form-select" name="direction"><option value="out">Исходящий</option><option value="in">Входящий</option></select></div><div class="col-12"><input class="form-control" name="subject" placeholder="Тема"></div><div class="col-12"><textarea class="form-control" name="body" rows="4" placeholder="Результат контакта"></textarea></div><div class="col-12"><input type="datetime-local" class="form-control" name="occurred_at" value="{{ now()->format('Y-m-d\TH:i') }}" required></div><div class="col-12"><button class="btn btn-primary w-100">Сохранить</button></div></form></div></div><div class="col-xl-8"><div class="admin-card p-4"><h3>История коммуникаций</h3><div class="table-responsive"><table class="table mini-table"><thead><tr><th>Время</th><th>Клиент</th><th>Канал</th><th>Тема</th><th>Комментарий</th></tr></thead><tbody>@foreach($interactions as $i)<tr><td>{{ $i->occurred_at->format('d.m H:i') }}</td><td>{{ $i->customer?->name ?: $i->lead?->name }}</td><td>{{ $i->direction==='in'?'←':'→' }} {{ $i->channel }}</td><td>{{ $i->subject }}</td><td>{{ Str::limit($i->body,120) }}</td></tr>@endforeach</tbody></table></div></div></div></div></div>
-<div class="tab-pane fade" id="campaigns"><div class="row g-4"><div class="col-xl-4"><div class="admin-card p-4"><h3>Новая рассылка</h3><form method="post" action="{{ route('admin.crm-plus.campaigns.store') }}" class="row g-2">@csrf<div class="col-12"><input class="form-control" name="name" placeholder="Продление абонемента" required></div><div class="col-12"><select class="form-select" name="channel"><option value="email">Email</option><option value="sms">SMS</option><option value="telegram">Telegram</option><option value="whatsapp">WhatsApp</option><option value="push">Push</option></select></div><div class="col-12"><input class="form-control" name="subject" placeholder="Тема"></div><div class="col-12"><textarea class="form-control" name="body" rows="6" placeholder="Текст сообщения" required></textarea></div><div class="col-12"><button class="btn btn-primary w-100">Создать черновик</button></div></form></div></div><div class="col-xl-8"><div class="admin-card p-4"><h3>Кампании</h3>@foreach($campaigns as $c)<div class="d-flex justify-content-between border-bottom py-3"><div><strong>{{ $c->name }}</strong><div class="small text-muted">{{ $c->channel }} · {{ $c->status }} · {{ $c->messages()->count() }} сообщений</div></div>@if($c->status==='draft')<form method="post" action="{{ route('admin.crm-plus.campaigns.launch',$c) }}">@csrf<button class="btn btn-sm btn-success">В очередь</button></form>@endif</div>@endforeach<p class="small text-muted mt-3">Внешние SMS/WhatsApp/Telegram/Push-провайдеры подключаются через обработчик очереди; CRM уже формирует адресатов и журнал доставки.</p></div></div></div></div>
-<div class="tab-pane fade" id="corporate"><div class="row g-4"><div class="col-xl-4"><div class="admin-card p-4"><h3>Организация</h3><form method="post" action="{{ route('admin.crm-plus.corporates.store') }}" class="row g-2">@csrf<div class="col-12"><input class="form-control" name="name" placeholder="ООО Компания" required></div><div class="col-12"><input class="form-control" name="tax_id" placeholder="ИНН"></div><div class="col-12"><input class="form-control" name="contact_name" placeholder="Контактное лицо"></div><div class="col-6"><input class="form-control" name="phone" placeholder="Телефон"></div><div class="col-6"><input class="form-control" name="email" placeholder="Email"></div><div class="col-6"><input type="number" step="0.01" class="form-control" name="discount_percent" value="0" placeholder="Скидка %"></div><div class="col-6"><input type="number" step="0.01" class="form-control" name="credit_limit" value="0" placeholder="Лимит"></div><div class="col-12"><button class="btn btn-primary w-100">Создать</button></div></form></div></div><div class="col-xl-8">@foreach($corporates as $corp)<div class="admin-card p-4 mb-3"><div class="d-flex justify-content-between"><div><h3>{{ $corp->name }}</h3><small>ИНН {{ $corp->tax_id }} · скидка {{ $corp->discount_percent }}%</small></div><span class="badge text-bg-light">{{ $corp->members->count() }} чел.</span></div><div class="row mt-3"><div class="col-md-6"><form method="post" action="{{ route('admin.crm-plus.corporates.members.store',$corp) }}" class="d-flex gap-1">@csrf<select class="form-select form-select-sm" name="customer_id" required><option value="">Добавить клиента</option>@foreach($customers as $customer)<option value="{{ $customer->id }}">{{ $customer->name }}</option>@endforeach</select><input class="form-control form-control-sm" name="employee_number" placeholder="Таб. №"><button class="btn btn-sm btn-dark">+</button></form></div><div class="col-md-6 small">@foreach($corp->members as $m)<span class="badge text-bg-secondary me-1">{{ $m->customer->name }}</span>@endforeach</div></div></div>@endforeach</div></div></div>
-<div class="tab-pane fade" id="documents"><div class="row g-4"><div class="col-xl-4"><div class="admin-card p-4 mb-4"><h3>Шаблон договора</h3><form method="post" action="{{ route('admin.crm-plus.templates.store') }}" class="row g-2">@csrf<div class="col-12"><input class="form-control" name="name" placeholder="Договор членства" required></div><div class="col-12"><input class="form-control" name="type" value="membership_contract"></div><div class="col-12"><textarea class="form-control" name="body" rows="7" required>Договор от {{date}}. Клиент: {{name}}, телефон: {{phone}}, email: {{email}}.</textarea></div><div class="col-12"><button class="btn btn-outline-primary w-100">Сохранить шаблон</button></div></form></div><div class="admin-card p-4"><h3>Сформировать документ</h3><form method="post" action="{{ route('admin.crm-plus.documents.store') }}" class="row g-2">@csrf<div class="col-12"><select class="form-select" name="customer_id" required>@foreach($customers as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach</select></div><div class="col-12"><select class="form-select" name="document_template_id" required>@foreach($templates as $t)<option value="{{ $t->id }}">{{ $t->name }}</option>@endforeach</select></div><div class="col-12"><input class="form-control" name="type" value="contract"></div><div class="col-12"><button class="btn btn-primary w-100">Сформировать</button></div></form></div></div><div class="col-xl-8"><div class="admin-card p-4"><h3>Документы клиентов</h3>@foreach($documents as $doc)<div class="d-flex justify-content-between align-items-start border-bottom py-3"><div><strong>{{ $doc->number }}</strong> · {{ $doc->customer->name }}<div class="small text-muted">{{ $doc->type }} · {{ $doc->status }}</div><details class="mt-1"><summary class="small">Текст</summary><div class="small mt-2 p-2 bg-light rounded">{{ $doc->content }}</div></details></div>@if($doc->status!=='signed')<form method="post" action="{{ route('admin.crm-plus.documents.sign',$doc) }}">@csrf<button class="btn btn-sm btn-success">Подписан</button></form>@else<span class="badge text-bg-success">{{ optional($doc->signed_at)->format('d.m.Y H:i') }}</span>@endif</div>@endforeach</div></div></div></div></div>
+<ul class="nav nav-pills crm-tabs mb-4">
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tasks">Задачи</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#interactions">Контакты</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#campaigns">Рассылки</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#corporate">Корпоративные</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#documents">Договоры</button></li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="tasks">
+        <div class="row g-4">
+            <div class="col-xl-4"><div class="admin-card p-4"><h3>Новая задача</h3>
+                <form method="post" action="{{ route('admin.crm-plus.tasks.store') }}" class="row g-2">@csrf
+                    <div class="col-12"><input class="form-control" name="title" placeholder="Позвонить по продлению" required></div>
+                    <div class="col-6"><select class="form-select" name="customer_id"><option value="">Клиент</option>@foreach($customers as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach</select></div>
+                    <div class="col-6"><select class="form-select" name="lead_id"><option value="">Лид</option>@foreach($leads as $l)<option value="{{ $l->id }}">{{ $l->name }}</option>@endforeach</select></div>
+                    <div class="col-6"><select class="form-select" name="assigned_to"><option value="">Ответственный</option>@foreach($users as $u)<option value="{{ $u->id }}">{{ $u->name }}</option>@endforeach</select></div>
+                    <div class="col-6"><select class="form-select" name="type"><option value="call">Звонок</option><option value="message">Сообщение</option><option value="meeting">Встреча</option><option value="renewal">Продление</option></select></div>
+                    <div class="col-12"><input type="datetime-local" class="form-control" name="due_at"></div>
+                    <div class="col-12"><textarea class="form-control" name="description" placeholder="Комментарий"></textarea></div>
+                    <div class="col-12"><button class="btn btn-primary w-100">Создать задачу</button></div>
+                </form>
+            </div></div>
+            <div class="col-xl-8"><div class="admin-card p-4"><h3>Задачи менеджеров</h3>
+                @forelse($tasks as $task)
+                    <div class="d-flex justify-content-between align-items-start border-bottom py-3"><div>
+                        <span class="badge {{ $task->status==='completed'?'text-bg-success':'text-bg-warning' }}">{{ $task->type }}</span>
+                        <strong>{{ $task->title }}</strong>
+                        <div class="small text-muted">{{ $task->customer?->name ?: $task->lead?->name }} · {{ $task->assignee?->name }} · {{ optional($task->due_at)->format('d.m.Y H:i') }}</div>
+                        @if($task->description)<div class="small mt-1">{{ $task->description }}</div>@endif
+                    </div>@if($task->status!=='completed')<form method="post" action="{{ route('admin.crm-plus.tasks.complete',$task) }}">@csrf<button class="btn btn-sm btn-outline-success">Готово</button></form>@endif</div>
+                @empty<div class="text-muted">Задач нет.</div>@endforelse
+            </div></div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="interactions">
+        <div class="row g-4">
+            <div class="col-xl-4"><div class="admin-card p-4"><h3>Зафиксировать контакт</h3>
+                <form method="post" action="{{ route('admin.crm-plus.interactions.store') }}" class="row g-2">@csrf
+                    <div class="col-12"><select class="form-select" name="customer_id"><option value="">Клиент</option>@foreach($customers as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach</select></div>
+                    <div class="col-12"><select class="form-select" name="lead_id"><option value="">Лид</option>@foreach($leads as $l)<option value="{{ $l->id }}">{{ $l->name }}</option>@endforeach</select></div>
+                    <div class="col-6"><select class="form-select" name="channel"><option value="phone">Телефон</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="email">Email</option><option value="visit">Визит</option></select></div>
+                    <div class="col-6"><select class="form-select" name="direction"><option value="out">Исходящий</option><option value="in">Входящий</option></select></div>
+                    <div class="col-12"><input class="form-control" name="subject" placeholder="Тема"></div>
+                    <div class="col-12"><textarea class="form-control" name="body" rows="4" placeholder="Результат контакта"></textarea></div>
+                    <div class="col-12"><input type="datetime-local" class="form-control" name="occurred_at" value="{{ now()->format('Y-m-d\TH:i') }}" required></div>
+                    <div class="col-12"><button class="btn btn-primary w-100">Сохранить</button></div>
+                </form>
+            </div></div>
+            <div class="col-xl-8"><div class="admin-card p-4"><h3>История коммуникаций</h3><div class="table-responsive"><table class="table mini-table"><thead><tr><th>Время</th><th>Клиент / лид</th><th>Канал</th><th>Тема</th><th>Комментарий</th></tr></thead><tbody>
+                @foreach($interactions as $i)<tr><td>{{ $i->occurred_at->format('d.m H:i') }}</td><td>{{ $i->customer?->name ?: $i->lead?->name }}</td><td>{{ $i->direction==='in'?'←':'→' }} {{ $i->channel }}</td><td>{{ $i->subject }}</td><td>{{ Str::limit($i->body,120) }}</td></tr>@endforeach
+            </tbody></table></div></div></div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="campaigns">
+        <div class="row g-4">
+            <div class="col-xl-4"><div class="admin-card p-4"><h3>Новая рассылка</h3>
+                <form method="post" action="{{ route('admin.crm-plus.campaigns.store') }}" class="row g-2">@csrf
+                    <div class="col-12"><input class="form-control" name="name" placeholder="Продление абонемента" required></div>
+                    <div class="col-12"><select class="form-select" name="channel"><option value="email">Email</option><option value="sms">SMS</option><option value="telegram">Telegram</option><option value="whatsapp">WhatsApp</option><option value="push">Push</option></select></div>
+                    <div class="col-12"><input class="form-control" name="subject" placeholder="Тема"></div>
+                    <div class="col-12"><textarea class="form-control" name="body" rows="6" placeholder="Текст сообщения" required></textarea></div>
+                    <div class="col-12"><button class="btn btn-primary w-100">Создать черновик</button></div>
+                </form>
+            </div></div>
+            <div class="col-xl-8"><div class="admin-card p-4"><h3>Кампании</h3>
+                @foreach($campaigns as $c)<div class="d-flex justify-content-between border-bottom py-3"><div><strong>{{ $c->name }}</strong><div class="small text-muted">{{ $c->channel }} · {{ $c->status }} · {{ $c->messages()->count() }} сообщений</div></div>@if(in_array($c->status,['draft','queued'],true))<form method="post" action="{{ route('admin.crm-plus.campaigns.launch',$c) }}">@csrf<button class="btn btn-sm btn-success">Сформировать очередь</button></form>@endif</div>@endforeach
+                <p class="small text-muted mt-3">CRM формирует адресатов и журнал очереди. Фактическая отправка SMS, WhatsApp, Telegram и Push выполняется через подключаемые провайдеры.</p>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="corporate">
+        <div class="row g-4">
+            <div class="col-xl-4"><div class="admin-card p-4"><h3>Организация</h3>
+                <form method="post" action="{{ route('admin.crm-plus.corporates.store') }}" class="row g-2">@csrf
+                    <div class="col-12"><input class="form-control" name="name" placeholder="ООО Компания" required></div>
+                    <div class="col-12"><input class="form-control" name="tax_id" placeholder="ИНН"></div>
+                    <div class="col-12"><input class="form-control" name="contact_name" placeholder="Контактное лицо"></div>
+                    <div class="col-6"><input class="form-control" name="phone" placeholder="Телефон"></div>
+                    <div class="col-6"><input class="form-control" name="email" placeholder="Email"></div>
+                    <div class="col-6"><input type="number" step="0.01" class="form-control" name="discount_percent" value="0" placeholder="Скидка %"></div>
+                    <div class="col-6"><input type="number" step="0.01" class="form-control" name="credit_limit" value="0" placeholder="Лимит"></div>
+                    <div class="col-12"><button class="btn btn-primary w-100">Создать</button></div>
+                </form>
+            </div></div>
+            <div class="col-xl-8">
+                @foreach($corporates as $corp)<div class="admin-card p-4 mb-3"><div class="d-flex justify-content-between"><div><h3>{{ $corp->name }}</h3><small>ИНН {{ $corp->tax_id }} · скидка {{ $corp->discount_percent }}%</small></div><span class="badge text-bg-light">{{ $corp->members->count() }} чел.</span></div><div class="row mt-3"><div class="col-md-6"><form method="post" action="{{ route('admin.crm-plus.corporates.members.store',$corp) }}" class="d-flex gap-1">@csrf<select class="form-select form-select-sm" name="customer_id" required><option value="">Добавить клиента</option>@foreach($customers as $customer)<option value="{{ $customer->id }}">{{ $customer->name }}</option>@endforeach</select><input class="form-control form-control-sm" name="employee_number" placeholder="Таб. №"><button class="btn btn-sm btn-dark">+</button></form></div><div class="col-md-6 small">@foreach($corp->members as $m)<span class="badge text-bg-secondary me-1">{{ $m->customer->name }}</span>@endforeach</div></div></div>@endforeach
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="documents">
+        <div class="row g-4">
+            <div class="col-xl-4">
+                <div class="admin-card p-4 mb-4"><h3>Шаблон договора</h3>
+                    <form method="post" action="{{ route('admin.crm-plus.templates.store') }}" class="row g-2">@csrf
+                        <div class="col-12"><input class="form-control" name="name" placeholder="Договор членства" required></div>
+                        <div class="col-12"><input class="form-control" name="type" value="membership_contract"></div>
+                        <div class="col-12"><textarea class="form-control" name="body" rows="7" required>Договор от @{{date}}. Клиент: @{{name}}, телефон: @{{phone}}, email: @{{email}}.</textarea></div>
+                        <div class="col-12"><small class="text-muted">Доступные маркеры: @{{name}}, @{{phone}}, @{{email}}, @{{date}}</small></div>
+                        <div class="col-12"><button class="btn btn-outline-primary w-100">Сохранить шаблон</button></div>
+                    </form>
+                </div>
+                <div class="admin-card p-4"><h3>Сформировать документ</h3>
+                    <form method="post" action="{{ route('admin.crm-plus.documents.store') }}" class="row g-2">@csrf
+                        <div class="col-12"><select class="form-select" name="customer_id" required>@foreach($customers as $c)<option value="{{ $c->id }}">{{ $c->name }}</option>@endforeach</select></div>
+                        <div class="col-12"><select class="form-select" name="document_template_id" required>@foreach($templates as $t)<option value="{{ $t->id }}">{{ $t->name }}</option>@endforeach</select></div>
+                        <div class="col-12"><input class="form-control" name="type" value="contract"></div>
+                        <div class="col-12"><button class="btn btn-primary w-100">Сформировать</button></div>
+                    </form>
+                </div>
+            </div>
+            <div class="col-xl-8"><div class="admin-card p-4"><h3>Документы клиентов</h3>
+                @foreach($documents as $doc)<div class="d-flex justify-content-between align-items-start border-bottom py-3"><div><strong>{{ $doc->number }}</strong> · {{ $doc->customer->name }}<div class="small text-muted">{{ $doc->type }} · {{ $doc->status }}</div><details class="mt-1"><summary class="small">Текст</summary><div class="small mt-2 p-2 bg-light rounded">{{ $doc->content }}</div></details></div>@if($doc->status!=='signed')<form method="post" action="{{ route('admin.crm-plus.documents.sign',$doc) }}">@csrf<button class="btn btn-sm btn-success">Подписан</button></form>@else<span class="badge text-bg-success">{{ optional($doc->signed_at)->format('d.m.Y H:i') }}</span>@endif</div>@endforeach
+            </div></div>
+        </div>
+    </div>
+</div>
 @endsection
