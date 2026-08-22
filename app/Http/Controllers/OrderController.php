@@ -6,13 +6,14 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Services\DynamicPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
-    public function store(Request $request)
+    public function store(Request $request, DynamicPricingService $pricing)
     {
         $data = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
@@ -23,13 +24,15 @@ class OrderController extends Controller
             'privacy' => ['accepted'],
         ]);
 
-        $order = DB::transaction(function () use ($data) {
+        $order = DB::transaction(function () use ($data, $pricing) {
             $product = Product::query()->where('is_active', true)->findOrFail($data['product_id']);
             $customer = Customer::query()->updateOrCreate(
                 ['phone' => preg_replace('/\D+/', '', $data['phone'])],
                 ['name' => $data['name'], 'email' => $data['email'], 'source' => 'shop']
             );
-            $total = $product->price * $data['quantity'];
+            $quote = $pricing->forProduct($product,$customer);
+            $quantity = (int)$data['quantity'];
+            $total = $quote['price'] * $quantity;
 
             $order = Order::query()->create([
                 'number' => 'GRE-'.now()->format('ymd').'-'.Str::upper(Str::random(6)),
@@ -44,10 +47,12 @@ class OrderController extends Controller
             $order->items()->create([
                 'product_id' => $product->id,
                 'name' => $product->name,
-                'quantity' => $data['quantity'],
-                'price' => $product->price,
+                'quantity' => $quantity,
+                'base_price' => $quote['base'],
+                'price' => $quote['price'],
+                'pricing_meta' => $quote,
                 'total' => $total,
-                'visits_left' => $product->visits_count ? $product->visits_count * $data['quantity'] : null,
+                'visits_left' => $product->visits_count ? $product->visits_count * $quantity : null,
             ]);
 
             Payment::query()->create([
