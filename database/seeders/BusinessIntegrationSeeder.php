@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\AccountingIntegration;
 use App\Models\PricingRule;
+use App\Models\Trainer;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -12,9 +13,18 @@ class BusinessIntegrationSeeder extends Seeder
 {
     public function run(): void
     {
-        User::updateOrCreate(['email'=>'director@greecya.local'],[
-            'name'=>'Директор комплекса','phone'=>'+7 900 888-88-88','role'=>'director','password'=>Hash::make('ChangeMe123!'),
-        ]);
+        $password = Hash::make('ChangeMe123!');
+        $trainer = Trainer::where('name','Анна Соколова')->first();
+        foreach([
+            ['director@greecya.local','Директор комплекса','director',null],
+            ['reception@greecya.local','Администратор ресепшена','receptionist',null],
+            ['trainer@greecya.local','Анна Соколова','trainer',$trainer?->id],
+            ['doctor@greecya.local','Врач бассейна','doctor',null],
+        ] as [$email,$name,$role,$trainerId]){
+            User::updateOrCreate(['email'=>$email],[
+                'name'=>$name,'phone'=>null,'role'=>$role,'trainer_id'=>$trainerId,'password'=>$password,
+            ]);
+        }
 
         AccountingIntegration::updateOrCreate(['name'=>'1С:Бухгалтерия'],[
             'driver'=>'json_http','organization_code'=>'GREECYA-DEMO','format_version'=>'1.23','options'=>['timeout'=>30],'is_active'=>false,
@@ -30,7 +40,6 @@ class BusinessIntegrationSeeder extends Seeder
             ['Семейная скидка −10%','service','family',null,null,null,null,null,'percent',-10,70,true],
             ['Семейная скидка на абонементы −5%','product','family',null,null,null,null,null,'percent',-5,70,true],
         ];
-
         foreach($rules as [$name,$target,$segment,$weekdays,$from,$to,$occMin,$occMax,$type,$value,$priority,$combinable]){
             PricingRule::updateOrCreate(['name'=>$name],[
                 'target_type'=>$target,'customer_segment'=>$segment,'weekdays'=>$weekdays,'time_from'=>$from,'time_to'=>$to,
