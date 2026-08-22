@@ -190,6 +190,9 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+@if(request()->routeIs('admin.pool.*'))
+    <script src="{{ asset('js/pool-lane-delete.js') }}"></script>
+@endif
 @stack('scripts')
 </body>
 </html>
