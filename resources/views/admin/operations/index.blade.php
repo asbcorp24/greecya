@@ -293,16 +293,21 @@
 </div>
 @endsection
 
+@php
+    $chartRows = $readings->map(function ($reading) {
+        return [
+            't' => $reading->measured_at->format('d.m H:i'),
+            'temperature' => $reading->temperature,
+            'ph' => $reading->ph,
+            'chlorine' => $reading->free_chlorine,
+        ];
+    })->values();
+@endphp
+
 @push('scripts')
 <script>
 (() => {
-    const rows = @json($readings->map(fn($r) => [
-        't' => $r->measured_at->format('d.m H:i'),
-        'temperature' => $r->temperature,
-        'ph' => $r->ph,
-        'chlorine' => $r->free_chlorine,
-    ])->values());
-
+    const rows = @json($chartRows);
     const c = document.getElementById('waterChart');
     if (!c || rows.length < 2) return;
 
