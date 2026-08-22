@@ -4,6 +4,17 @@
 @section('heading', 'Эксплуатация бассейна')
 @section('eyebrow', 'Вода, нормативы, реагенты и чек-листы')
 
+@php
+    $chartRows = $readings->map(function ($reading) {
+        return [
+            't' => $reading->measured_at->format('d.m H:i'),
+            'temperature' => $reading->temperature,
+            'ph' => $reading->ph,
+            'chlorine' => $reading->free_chlorine,
+        ];
+    })->values();
+@endphp
+
 @section('content')
 <div class="d-flex flex-wrap gap-2 mb-4">
     @foreach($zones as $z)
@@ -40,7 +51,7 @@
                 <div class="col-12">
                     <select class="form-select" name="pool_zone_id" required>
                         @foreach($zones as $z)
-                            <option value="{{ $z->id }}" @selected($selectedZone == $z->id)>{{ $z->name }}</option>
+                            <option value="{{ $z->id }}" {{ $selectedZone == $z->id ? 'selected' : '' }}>{{ $z->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -108,8 +119,10 @@
         <div class="admin-card p-4">
             <h3>Нормативные диапазоны</h3>
             @foreach($zones->where('type', 'pool') as $z)
-                @php($n = $norms->get($z->id))
-                <details class="border rounded-3 p-2 mb-2" @if($selectedZone == $z->id) open @endif>
+                @php
+                    $n = $norms->get($z->id);
+                @endphp
+                <details class="border rounded-3 p-2 mb-2" {{ $selectedZone == $z->id ? 'open' : '' }}>
                     <summary class="fw-bold">{{ $z->name }}</summary>
                     <form method="post" action="{{ route('admin.operations.norm.update', $z) }}" class="row g-2 mt-2">
                         @csrf
@@ -125,7 +138,7 @@
                         <div class="col-6"><input type="number" step="0.001" class="form-control form-control-sm" name="turbidity_max" value="{{ $n?->turbidity_max }}" placeholder="Мутность max"></div>
                         <div class="col-6">
                             <label class="form-check mt-1">
-                                <input class="form-check-input" type="checkbox" name="alerts_enabled" value="1" @checked(!$n || $n->alerts_enabled)>
+                                <input class="form-check-input" type="checkbox" name="alerts_enabled" value="1" {{ (!$n || $n->alerts_enabled) ? 'checked' : '' }}>
                                 alerts
                             </label>
                         </div>
@@ -292,17 +305,6 @@
     </div>
 </div>
 @endsection
-
-@php
-    $chartRows = $readings->map(function ($reading) {
-        return [
-            't' => $reading->measured_at->format('d.m H:i'),
-            'temperature' => $reading->temperature,
-            'ph' => $reading->ph,
-            'chlorine' => $reading->free_chlorine,
-        ];
-    })->values();
-@endphp
 
 @push('scripts')
 <script>
