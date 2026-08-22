@@ -121,6 +121,29 @@ class PoolController extends Controller
 
     public function storeLane(Request $request)
     {
+        $action = $request->input('action', 'create');
+
+        if ($action === 'delete') {
+            $data = $request->validate([
+                'lane_id' => ['required', 'integer', 'exists:pool_lanes,id'],
+            ]);
+
+            $lane = PoolLane::with('zone')->findOrFail($data['lane_id']);
+            $blockers = $this->laneDeleteBlockers($lane);
+
+            if ($blockers !== []) {
+                return back()->withErrors([
+                    'lane' => 'Удаление дорожки «'.$lane->name.'» запрещено: есть связанные данные ('.implode(', ', $blockers).'). Отключите дорожку или переведите её в статус «Закрыта», чтобы сохранить историю.',
+                ]);
+            }
+
+            $name = $lane->name;
+            $zoneName = $lane->zone?->name;
+            $lane->delete();
+
+            return back()->with('success', 'Дорожка «'.$name.'»'.($zoneName ? ' бассейна «'.$zoneName.'»' : '').' удалена.');
+        }
+
         $data = $request->validate([
             'pool_zone_id' => 'required|exists:pool_zones,id',
             'name' => 'required|string|max:100',
@@ -134,6 +157,27 @@ class PoolController extends Controller
         PoolLane::create($data);
 
         return back()->with('success', 'Дорожка добавлена.');
+    }
+
+    private function laneDeleteBlockers(PoolLane $lane): array
+    {
+        $checks = [
+            'назначения на сеансы' => fn () => DB::table('schedule_slot_lane')->where('pool_lane_id', $lane->id)->exists(),
+            'техобслуживание' => fn () => DB::table('maintenance_tasks')->where('pool_lane_id', $lane->id)->exists(),
+            'эксплуатационные операции' => fn () => DB::table('pool_operations')->where('pool_lane_id', $lane->id)->exists(),
+            'инциденты' => fn () => DB::table('safety_incidents')->where('pool_lane_id', $lane->id)->exists(),
+            'группы школы плавания' => fn () => DB::table('swim_groups')->where('pool_lane_id', $lane->id)->exists(),
+            'занятия школы плавания' => fn () => DB::table('swim_group_sessions')->where('pool_lane_id', $lane->id)->exists(),
+        ];
+
+        $blockers = [];
+        foreach ($checks as $label => $check) {
+            if ($check()) {
+                $blockers[] = $label;
+            }
+        }
+
+        return $blockers;
     }
 
     public function updateLane(Request $request, PoolLane $lane)
