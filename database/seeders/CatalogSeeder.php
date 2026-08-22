@@ -16,6 +16,7 @@ class CatalogSeeder extends Seeder
     {
         User::query()->updateOrCreate(['email'=>'admin@greecya.local'],['name'=>'Администратор','phone'=>'+7 965 587-77-99','role'=>'admin','password'=>Hash::make('ChangeMe123!')]);
         User::query()->updateOrCreate(['email'=>'manager@greecya.local'],['name'=>'Менеджер','phone'=>'+7 900 111-22-33','role'=>'manager','password'=>Hash::make('ChangeMe123!')]);
+        User::query()->updateOrCreate(['email'=>'accountant@greecya.local'],['name'=>'Бухгалтер','phone'=>'+7 900 444-55-66','role'=>'accountant','password'=>Hash::make('ChangeMe123!')]);
 
         $services = [
             ['free-swimming','Свободное плавание','pool','Самостоятельное посещение 25-метрового бассейна с морской водой.',60,700,20,false,10],
