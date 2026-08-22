@@ -2,11 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AccessCard;
 use App\Models\Customer;
 use App\Models\Locker;
-use App\Models\LockerRental;
-use App\Models\MedicalClearance;
 use App\Models\PoolZone;
 use App\Services\MembershipEligibilityService;
 use Illuminate\Http\Request;
@@ -37,8 +34,8 @@ class ReceptionController extends Controller
         $status=null;
         if($customer){
             $membership=$eligibility->findUsable($customer,null,null,now());
-            $medical=$customer->medicalClearances->sortByDesc('expires_on')->first(fn($m)=>$m->isValid());
-            $blockedMedical=$customer->medicalClearances->first(fn($m)=>$m->access_blocked || in_array($m->status,['revoked','expired'],true));
+            $medical=$customer->medicalClearances->sortByDesc(fn($m)=>$m->expires_on?->timestamp ?? PHP_INT_MAX)->first(fn($m)=>$m->isValid() && !$m->access_blocked);
+            $blockedMedical=$customer->medicalClearances->sortByDesc('updated_at')->first(fn($m)=>$m->access_blocked);
             $debt=$customer->orders->whereNotIn('payment_status',['paid','refunded'])->sum(fn($o)=>(float)$o->total);
             $rental=$customer->lockerRentals->first();
             $status=compact('membership','medical','blockedMedical','debt','rental');
