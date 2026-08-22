@@ -12,6 +12,10 @@ class DashboardController extends Controller
 {
     public function __invoke()
     {
+        if (auth()->user()?->role === 'accountant') {
+            return redirect()->route('admin.finance.index');
+        }
+
         return view('admin.dashboard', [
             'todayBookings' => Booking::query()->whereHas('slot', fn ($q) => $q->whereDate('starts_at', today()))->count(),
             'newLeads' => Lead::query()->where('status', 'new')->count(),
