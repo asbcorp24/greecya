@@ -82,7 +82,7 @@ class AdvancedBusinessTest extends TestCase
 
     public function test_new_seeded_tables_are_idempotent(): void
     {
-        $tables=['permissions','role_permissions','families','family_members','family_wallets','swim_groups','swim_group_members','medical_clearance_logs','pool_operation_logs','safety_incidents','inventory_batches','accounting_integrations','pricing_rules'];
+        $tables=['permissions','role_permissions','families','family_members','family_wallets','swim_groups','swim_group_members','medical_clearance_history','pool_operations','safety_incidents','inventory_batches','accounting_integrations','pricing_rules'];
         $this->seed(DatabaseSeeder::class);
         $first=collect($tables)->mapWithKeys(fn($table)=>[$table=>DB::table($table)->count()])->all();
         $this->seed(DatabaseSeeder::class);
