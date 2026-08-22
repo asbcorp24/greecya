@@ -14,9 +14,14 @@ class RedirectIfAuthenticated
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
                 $user = Auth::guard($guard)->user();
-                return redirect()->route($user->role === 'customer' ? 'account.dashboard' : 'admin.dashboard');
+                $route = $user->role === 'customer'
+                    ? 'account.dashboard'
+                    : ($user->role === 'accountant' ? 'admin.finance.index' : 'admin.dashboard');
+
+                return redirect()->route($route);
             }
         }
+
         return $next($request);
     }
 }
