@@ -14,6 +14,6 @@ class InventoryMovement extends Model
 
     public function item(){ return $this->belongsTo(InventoryItem::class, 'inventory_item_id'); }
     public function batch(){ return $this->belongsTo(InventoryBatch::class, 'inventory_batch_id'); }
-    public function zone(){ return $this->belongsTo(PoolZone::class, 'pool_zone_id'); }
+    public function zone(){ return $this->belongsTo(PoolZone::class, 'pool_zone_id')->withTrashed(); }
     public function user(){ return $this->belongsTo(User::class); }
 }
