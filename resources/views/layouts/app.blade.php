@@ -75,6 +75,16 @@
                 @auth
                     <li class="nav-item"><a class="nav-link" href="{{ route('help.index') }}"><i class="bi bi-question-circle me-1"></i>Справка</a></li>
                     <li class="nav-item ms-xl-1"><a class="btn btn-outline-primary rounded-pill px-3" href="{{ auth()->user()->role === 'customer' ? route('account.dashboard') : (auth()->user()->role === 'director' ? route('admin.director.dashboard') : route('admin.dashboard')) }}"><i class="bi bi-person-circle me-1"></i> Кабинет</a></li>
+                    @if(auth()->user()->role === 'customer')
+                        <li class="nav-item ms-xl-1">
+                            <form method="post" action="{{ route('logout') }}" class="m-0">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-secondary rounded-pill px-3">
+                                    <i class="bi bi-box-arrow-right me-1"></i>Выйти
+                                </button>
+                            </form>
+                        </li>
+                    @endif
                 @else
                     <li class="nav-item ms-xl-1"><a class="nav-link" href="{{ route('login') }}">Войти</a></li>
                 @endauth
