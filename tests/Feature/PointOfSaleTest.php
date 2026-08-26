@@ -72,7 +72,7 @@ class PointOfSaleTest extends TestCase
         $item = $order->items()->firstOrFail();
         $this->assertNotNull($item->ticket_code);
         $this->assertSame(1, $item->visits_left);
-        $this->assertTrue($item->valid_until->isToday());
+        $this->assertTrue($item->valid_until->isSameDay(today()->addDay()));
 
         $payment = $order->payments()->firstOrFail();
         $this->assertSame('pos_card', $payment->provider);
@@ -122,6 +122,17 @@ class PointOfSaleTest extends TestCase
         $event = AccessEvent::where('customer_id', $customer->id)->latest('occurred_at')->firstOrFail();
         $this->assertSame('allowed', $event->result);
         $this->assertSame('enter', $event->event_type);
+
+        $this->actingAs($receptionist)
+            ->from(route('reception.index', ['customer' => $customer->id]))
+            ->post(route('admin.access.checkin'), [
+                'customer_id' => $customer->id,
+                'pool_zone_id' => $zone->id,
+                'event_type' => 'enter',
+            ])
+            ->assertSessionHasErrors('access');
+
+        $this->assertSame(1, Visit::where('customer_id', $customer->id)->count());
     }
 
     public function test_pos_reuses_existing_customer_when_phone_format_differs(): void
