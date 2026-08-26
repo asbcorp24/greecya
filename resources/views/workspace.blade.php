@@ -25,6 +25,9 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2 gap-md-3">
+            @if(auth()->user()->hasPermission('sales.pos') && request()->routeIs('reception*'))
+                <a class="btn btn-success" href="{{ route('reception.sales.create') }}"><i class="bi bi-cart-plus"></i> <span class="d-none d-md-inline">Первичная продажа</span></a>
+            @endif
             <a class="btn btn-outline-primary" href="{{ route('help.index') }}"><i class="bi bi-question-circle"></i> <span class="d-none d-md-inline">Справка</span></a>
             <div class="text-end d-none d-sm-block">
                 <strong>{{ auth()->user()->name }}</strong>
