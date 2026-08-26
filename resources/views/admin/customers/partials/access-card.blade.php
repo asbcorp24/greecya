@@ -3,6 +3,7 @@
         ->filter(fn ($card) => $card->type === 'qr' && $card->status === 'active' && (! $card->expires_at || $card->expires_at->isFuture()))
         ->sortByDesc('issued_at')
         ->first();
+    $canManageQrCard = auth()->user()->hasPermission('access.manage') || auth()->user()->hasPermission('sales.pos');
 @endphp
 
 <div class="admin-card p-4 mb-4">
@@ -18,14 +19,16 @@
                 <a class="btn btn-primary" href="{{ route('admin.customers.card.print', $customer) }}" target="_blank">
                     <i class="bi bi-printer me-1"></i>Распечатать карту
                 </a>
-                <form method="post" action="{{ route('admin.customers.card.reissue', $customer) }}" onsubmit="return confirm('Перевыпустить QR-карту? Старая QR-карта перестанет работать.');">
-                    @csrf
-                    <button class="btn btn-outline-danger" type="submit">
-                        <i class="bi bi-arrow-repeat me-1"></i>Перевыпустить
-                    </button>
-                </form>
+                @if($canManageQrCard)
+                    <form method="post" action="{{ route('admin.customers.card.reissue', $customer) }}" onsubmit="return confirm('Перевыпустить QR-карту? Старая QR-карта перестанет работать.');">
+                        @csrf
+                        <button class="btn btn-outline-danger" type="submit">
+                            <i class="bi bi-arrow-repeat me-1"></i>Перевыпустить
+                        </button>
+                    </form>
+                @endif
             </div>
-        @else
+        @elseif($canManageQrCard)
             <form method="post" action="{{ route('admin.customers.card.issue', $customer) }}">
                 @csrf
                 <button class="btn btn-primary" type="submit">
@@ -76,5 +79,7 @@
                 }
             });
         </script>
+    @elseif(! $canManageQrCard)
+        <div class="alert alert-light border mt-3 mb-0">У клиента пока нет активной QR-карты. Для выдачи обратитесь к сотруднику с правом управления СКУД или продажами.</div>
     @endif
 </div>
