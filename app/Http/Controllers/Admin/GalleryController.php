@@ -44,9 +44,30 @@ class GalleryController extends Controller
     }
     public function storePhoto(Request $request, GalleryAlbum $album)
     {
-        $data = $request->validate(['images' => ['required', 'array', 'min:1', 'max:20'], 'images.*' => ['image', 'max:5120'], 'title' => ['nullable', 'string', 'max:190'], 'caption' => ['nullable', 'string', 'max:1000']]);
-        foreach ($request->file('images') as $index => $image) $album->photos()->create(['image_path' => $image->store('gallery/photos', 'public'), 'title' => $data['title'] ?: null, 'caption' => $data['caption'] ?: null, 'sort_order' => 100 + $index, 'is_published' => true]);
-        if (! $album->cover_path && $album->photos()->exists()) $album->update(['cover_path' => $album->photos()->oldest()->value('image_path')]);
+        $data = $request->validate([
+            'images' => ['required', 'array', 'min:1', 'max:20'],
+            'images.*' => ['image', 'max:5120'],
+            'title' => ['nullable', 'string', 'max:190'],
+            'caption' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $title = $data['title'] ?? null;
+        $caption = $data['caption'] ?? null;
+
+        foreach ($request->file('images') as $index => $image) {
+            $album->photos()->create([
+                'image_path' => $image->store('gallery/photos', 'public'),
+                'title' => $title ?: null,
+                'caption' => $caption ?: null,
+                'sort_order' => 100 + $index,
+                'is_published' => true,
+            ]);
+        }
+
+        if (! $album->cover_path && $album->photos()->exists()) {
+            $album->update(['cover_path' => $album->photos()->oldest()->value('image_path')]);
+        }
+
         return back()->with('success', 'Фотографии добавлены.');
     }
     public function updatePhoto(Request $request, GalleryPhoto $photo)
