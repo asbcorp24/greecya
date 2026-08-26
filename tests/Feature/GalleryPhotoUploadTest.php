@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\GalleryAlbum;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -51,5 +52,13 @@ class GalleryPhotoUploadTest extends TestCase
 
         $album->refresh();
         $this->assertSame($photo->image_path, $album->cover_path);
+
+        $log = AuditLog::where('route_name', 'admin.gallery.photos.store')->latest('id')->firstOrFail();
+        $fileInfo = $log->metadata['input']['images'][0] ?? null;
+
+        $this->assertIsArray($fileInfo);
+        $this->assertTrue($fileInfo['uploaded_file']);
+        $this->assertSame('pool.jpg', $fileInfo['name']);
+        $this->assertSame('image/jpeg', $fileInfo['mime']);
     }
 }
