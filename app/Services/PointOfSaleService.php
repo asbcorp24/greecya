@@ -16,8 +16,10 @@ use Illuminate\Validation\ValidationException;
 
 class PointOfSaleService
 {
-    public function __construct(private DynamicPricingService $pricing)
-    {
+    public function __construct(
+        private DynamicPricingService $pricing,
+        private CustomerAccessCardService $accessCards
+    ) {
     }
 
     public function sell(array $data, User $seller, string $source): Order
@@ -37,6 +39,8 @@ class PointOfSaleService
             }
 
             $customer = $this->resolveCustomer($data, $source);
+            $this->accessCards->ensure($customer);
+
             $product = Product::query()->with('membershipPlan')->where('is_active', true)->find($data['product_id']);
 
             if (! $product) {
