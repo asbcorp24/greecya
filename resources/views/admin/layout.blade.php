@@ -62,7 +62,7 @@
                 <a class="{{ request()->routeIs('admin.bookings.*') ? 'active' : '' }}" href="{{ route('admin.bookings.index') }}"><i class="bi bi-calendar2-check"></i>Записи</a>
             @endif
 
-            @if($u->hasPermission('customers.view') || $u->hasPermission('memberships.view') || $u->hasPermission('families.view') || $u->hasPermission('swim_school.view') || $u->hasPermission('leads.view'))
+            @if($u->hasPermission('customers.view') || $u->hasPermission('memberships.view') || $u->hasPermission('families.view') || $u->hasPermission('swim_school.view') || $u->hasPermission('leads.view') || $u->hasPermission('sales.pos'))
                 <div class="nav-caption">Клиенты и продажи</div>
             @endif
             @if($u->hasPermission('customers.view'))
@@ -76,6 +76,9 @@
             @endif
             @if($u->hasPermission('memberships.view'))
                 <a class="{{ request()->routeIs('admin.memberships.*') ? 'active' : '' }}" href="{{ route('admin.memberships.index') }}"><i class="bi bi-person-vcard"></i>Членства и пакеты</a>
+            @endif
+            @if($u->hasPermission('sales.pos') && in_array($u->role, ['admin','director','manager','cashier'], true))
+                <a class="{{ request()->routeIs('admin.sales.*') ? 'active' : '' }}" href="{{ route('admin.sales.index') }}"><i class="bi bi-cart-check"></i>Продажа</a>
             @endif
             @if($u->hasPermission('pricing.manage'))
                 <a class="{{ request()->routeIs('admin.pricing.*') ? 'active' : '' }}" href="{{ route('admin.pricing.index') }}"><i class="bi bi-tags"></i>Динамические цены</a>

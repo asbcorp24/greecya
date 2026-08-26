@@ -12,6 +12,7 @@ class HelpController extends Controller
         $roles = config('help.roles', []);
         $common = config('help.common', []);
         $roles = $this->withAdminMenuGuide($roles);
+        $roles = $this->withPosRoleGuide($roles);
 
         $canBrowseAll = in_array($user->role, ['admin', 'director', 'manager'], true);
         $selectedRole = $canBrowseAll
@@ -47,6 +48,26 @@ class HelpController extends Controller
 
         $guide = config('help_admin_menu', []);
         $sections = $guide['sections'] ?? [];
+        $posItem = config('help_pos.admin_menu_item');
+
+        if ($posItem) {
+            foreach ($sections as &$section) {
+                if (($section['title'] ?? null) !== 'Клиенты и продажи') {
+                    continue;
+                }
+
+                $items = $section['items'] ?? [];
+                $position = collect($items)->search(fn (array $item) => ($item['title'] ?? null) === 'Динамические цены');
+                if ($position === false) {
+                    $items[] = $posItem;
+                } else {
+                    array_splice($items, $position, 0, [$posItem]);
+                }
+                $section['items'] = $items;
+                break;
+            }
+            unset($section);
+        }
 
         if (!$sections) {
             return $roles;
@@ -60,7 +81,7 @@ class HelpController extends Controller
                 'Инструкции расположены в том же порядке, что и левое меню CRM.',
                 'Найдите нужный раздел через строку поиска справки и выполняйте шаги сверху вниз.',
             ],
-            'example' => 'Поиск по словам «Бассейн и дорожки», «Касса и платежи», «SEO» или «Роли и права» сразу показывает соответствующую инструкцию.',
+            'example' => 'Поиск по словам «Бассейн и дорожки», «Продажа», «Касса и платежи», «SEO» или «Роли и права» сразу показывает соответствующую инструкцию.',
             'errors' => [],
         ];
 
@@ -90,6 +111,22 @@ class HelpController extends Controller
                     'errors' => [],
                 ];
                 $number++;
+            }
+        }
+
+        return $roles;
+    }
+
+    private function withPosRoleGuide(array $roles): array
+    {
+        $workflow = config('help_pos.manager_workflow');
+        if (! $workflow) {
+            return $roles;
+        }
+
+        foreach (['manager', 'cashier', 'receptionist'] as $role) {
+            if (isset($roles[$role]['workflows'])) {
+                $roles[$role]['workflows'][] = $workflow;
             }
         }
 

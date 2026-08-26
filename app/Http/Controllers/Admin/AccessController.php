@@ -10,12 +10,14 @@ use App\Models\Customer;
 use App\Models\Locker;
 use App\Models\LockerRental;
 use App\Models\MedicalClearance;
+use App\Models\OrderItem;
 use App\Models\PoolZone;
 use App\Models\Visit;
 use App\Services\MembershipEligibilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AccessController extends Controller
 {
@@ -47,12 +49,44 @@ class AccessController extends Controller
 
         $booking=Booking::with('slot')->where('customer_id',$customer->id)->whereIn('status',['new','confirmed'])->whereHas('slot',fn($q)=>$q->whereDate('starts_at',today()))->orderBy('created_at')->first();
         $membership=$eligibility->findUsable($customer,$booking?->slot,$zone,now());
-        $requiresMedical=$zone->type==='pool'&&(!$membership||$membership->plan->requires_medical_clearance);
-        if($requiresMedical){$medical=MedicalClearance::where('customer_id',$customer->id)->where('status','valid')->where('access_blocked',false)->where(fn($q)=>$q->whereNull('expires_on')->orWhereDate('expires_on','>=',today()))->exists();if(!$medical){$this->deny($customer,$card,$zone,'Нет действующего медицинского допуска');return back()->withErrors(['access'=>'Нет действующего медицинского допуска.']);}}
-        if(!$membership&&!$booking){$reason='Нет подходящего активного абонемента или записи';$this->deny($customer,$card,$zone,$reason);return back()->withErrors(['access'=>$reason.' на сегодня.']);}
 
-        DB::transaction(function()use($customer,$card,$zone,$membership,$booking){if($membership){$locked=\App\Models\Membership::whereKey($membership->id)->lockForUpdate()->first();if($locked->visits_total!==null)$locked->increment('visits_used');}$visit=Visit::create(['customer_id'=>$customer->id,'booking_id'=>$booking?->id,'membership_id'=>$membership?->id,'visited_at'=>now(),'guests'=>1,'source'=>'access','notes'=>$membership?'Проход по членству '.$membership->number:'Проход по записи']);$customer->update(['last_visit_at'=>now()]);AccessEvent::create(['customer_id'=>$customer->id,'access_card_id'=>$card?->id,'pool_zone_id'=>$zone->id,'visit_id'=>$visit->id,'event_type'=>'enter','result'=>'allowed','occurred_at'=>now()]);});
-        return back()->with('success','Проход разрешён: '.$customer->name.($membership?' · '.$membership->number:''));
+        $ticket=null;
+        if(!$membership&&!$booking){
+            $ticket=OrderItem::query()
+                ->whereHas('order',fn($q)=>$q->where('customer_id',$customer->id)->where('payment_status','paid'))
+                ->whereHas('product',fn($q)=>$q->where('type','ticket'))
+                ->whereNotNull('ticket_code')
+                ->where(fn($q)=>$q->whereNull('valid_until')->orWhereDate('valid_until','>=',today()))
+                ->where('visits_left','>',0)
+                ->orderByRaw('CASE WHEN valid_until IS NULL THEN 1 ELSE 0 END')
+                ->orderBy('valid_until')
+                ->orderBy('id')
+                ->first();
+        }
+
+        $requiresMedical=$zone->type==='pool'&&($membership?$membership->plan->requires_medical_clearance:true);
+        if($requiresMedical){$medical=MedicalClearance::where('customer_id',$customer->id)->where('status','valid')->where('access_blocked',false)->where(fn($q)=>$q->whereNull('expires_on')->orWhereDate('expires_on','>=',today()))->exists();if(!$medical){$this->deny($customer,$card,$zone,'Нет действующего медицинского допуска');return back()->withErrors(['access'=>'Нет действующего медицинского допуска.']);}}
+        if(!$membership&&!$booking&&!$ticket){$reason='Нет подходящего активного абонемента, записи или оплаченного билета';$this->deny($customer,$card,$zone,$reason);return back()->withErrors(['access'=>$reason.' на сегодня.']);}
+
+        try {
+            DB::transaction(function()use($customer,$card,$zone,$membership,$booking,$ticket){
+                if($membership){$locked=\App\Models\Membership::whereKey($membership->id)->lockForUpdate()->first();if($locked->visits_total!==null)$locked->increment('visits_used');}
+                $lockedTicket=null;
+                if($ticket){
+                    $lockedTicket=OrderItem::whereKey($ticket->id)->lockForUpdate()->first();
+                    if(!$lockedTicket||$lockedTicket->visits_left===null||$lockedTicket->visits_left<=0){
+                        throw ValidationException::withMessages(['access'=>'Билет уже использован. Обновите карточку клиента.']);
+                    }
+                    $lockedTicket->decrement('visits_left');
+                }
+                $visit=Visit::create(['customer_id'=>$customer->id,'booking_id'=>$booking?->id,'membership_id'=>$membership?->id,'order_item_id'=>$lockedTicket?->id,'visited_at'=>now(),'guests'=>1,'source'=>'access','notes'=>$membership?'Проход по членству '.$membership->number:($lockedTicket?'Проход по билету '.$lockedTicket->ticket_code:'Проход по записи')]);
+                $customer->update(['last_visit_at'=>now()]);
+                AccessEvent::create(['customer_id'=>$customer->id,'access_card_id'=>$card?->id,'pool_zone_id'=>$zone->id,'visit_id'=>$visit->id,'event_type'=>'enter','result'=>'allowed','occurred_at'=>now()]);
+            });
+        } catch (ValidationException $e) {
+            return back()->withErrors($e->errors());
+        }
+        return back()->with('success','Проход разрешён: '.$customer->name.($membership?' · '.$membership->number:($ticket?' · билет '.$ticket->ticket_code:'')));
     }
 
     private function deny(Customer $customer,?AccessCard $card,PoolZone $zone,string $reason):void{AccessEvent::create(['customer_id'=>$customer->id,'access_card_id'=>$card?->id,'pool_zone_id'=>$zone->id,'event_type'=>'enter','result'=>'denied','reason'=>$reason,'occurred_at'=>now()]);}

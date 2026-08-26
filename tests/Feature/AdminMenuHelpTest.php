@@ -25,7 +25,11 @@ class AdminMenuHelpTest extends TestCase
             ->flatMap(fn (array $section) => $section['items'])
             ->values();
 
-        $this->assertCount(39, $items, 'Руководство должно покрывать 36 рабочих и 3 служебных пункта меню.');
+        if ($posItem = config('help_pos.admin_menu_item')) {
+            $items->push($posItem);
+        }
+
+        $this->assertCount(40, $items, 'Руководство должно покрывать 37 рабочих и 3 служебных пункта меню.');
 
         foreach ($items as $item) {
             $this->assertNotEmpty($item['purpose'] ?? null, 'Нет назначения для '.$item['title']);
@@ -49,6 +53,7 @@ class AdminMenuHelpTest extends TestCase
             ->assertSee('Полное руководство по меню администратора')
             ->assertSee('Бассейн и проход → Бассейн и дорожки')
             ->assertSee('Клиенты и продажи → Клиенты 360°')
+            ->assertSee('Клиенты и продажи → Продажа')
             ->assertSee('Финансы и товары → Касса и платежи')
             ->assertSee('Управление → Роли и права')
             ->assertSee('Сайт → Фотогалерея')
