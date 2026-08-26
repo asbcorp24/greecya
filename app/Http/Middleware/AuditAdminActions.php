@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Schema;
 
@@ -79,11 +80,37 @@ class AuditAdminActions
     private function sanitizedInput(Request $request): array
     {
         $data = Arr::except($request->all(), ['_token','password','password_confirmation','token','secret','api_key']);
-        foreach ($data as $key => $value) {
-            if (is_string($value) && mb_strlen($value) > 2000) {
-                $data[$key] = mb_substr($value, 0, 2000).'…';
-            }
+
+        return $this->sanitizeValue($data);
+    }
+
+    private function sanitizeValue(mixed $value): mixed
+    {
+        if ($value instanceof UploadedFile) {
+            return [
+                'uploaded_file' => true,
+                'name' => $value->getClientOriginalName(),
+                'mime' => $value->getClientMimeType(),
+                'size' => $value->getSize(),
+            ];
         }
-        return $data;
+
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->sanitizeValue($item);
+            }
+
+            return $value;
+        }
+
+        if (is_string($value) && mb_strlen($value) > 2000) {
+            return mb_substr($value, 0, 2000).'…';
+        }
+
+        if (is_null($value) || is_scalar($value)) {
+            return $value;
+        }
+
+        return '['.get_debug_type($value).']';
     }
 }
