@@ -104,6 +104,8 @@
     </div>
 </div>
 
+@include('admin.customers.partials.access-card')
+
 <div class="admin-card p-4 mb-4">
     <ul class="nav nav-pills gap-2" role="tablist">
         <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#timeline">История</button></li>
