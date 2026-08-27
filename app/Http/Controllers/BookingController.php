@@ -18,7 +18,11 @@ class BookingController extends Controller
     public function index(Request $request)
     {
         return view('booking.index', [
-            'services' => Service::query()->where('is_active', true)->orderBy('sort_order')->get(),
+            'services' => Service::query()
+                ->where('is_active', true)
+                ->where('online_booking', true)
+                ->orderBy('sort_order')
+                ->get(),
             'selectedService' => $request->integer('service'),
         ]);
     }
@@ -29,11 +33,22 @@ class BookingController extends Controller
             'service_id' => ['required', 'exists:services,id'],
             'date' => ['required', 'date', 'after_or_equal:today'],
         ]);
+
+        $service = Service::query()
+            ->whereKey($data['service_id'])
+            ->where('is_active', true)
+            ->where('online_booking', true)
+            ->first();
+
+        if (! $service) {
+            throw ValidationException::withMessages(['service_id' => 'Эта услуга сейчас недоступна для онлайн-записи.']);
+        }
+
         $customer = $request->user()?->role === 'customer' ? $request->user()->customer : null;
 
         $slots = ScheduleSlot::query()
             ->with(['trainer:id,name,specialization','service:id,price'])
-            ->where('service_id', $data['service_id'])
+            ->where('service_id', $service->id)
             ->whereDate('starts_at', $data['date'])
             ->where('starts_at', '>', now())
             ->where('status', 'open')
@@ -90,8 +105,12 @@ class BookingController extends Controller
                     ->where('is_active', true)
                     ->exists();
 
-            if ((int) $data['service_id'] !== $slot->service_id || !$poolAvailable || $slot->status !== 'open' || $slot->starts_at->isPast() || $slot->available_places < $data['people']) {
-                throw ValidationException::withMessages(['schedule_slot_id' => 'Выбранное время уже занято, бассейн недоступен или слот не относится к выбранной услуге. Пожалуйста, выберите другое время.']);
+            $serviceAvailable = $slot->service
+                && $slot->service->is_active
+                && $slot->service->online_booking;
+
+            if ((int) $data['service_id'] !== $slot->service_id || ! $serviceAvailable || ! $poolAvailable || $slot->status !== 'open' || $slot->starts_at->isPast() || $slot->available_places < $data['people']) {
+                throw ValidationException::withMessages(['schedule_slot_id' => 'Выбранное время уже занято, услуга или бассейн недоступны либо слот не относится к выбранной услуге. Пожалуйста, выберите другое время.']);
             }
 
             $phone = preg_replace('/\D+/', '', $data['phone']);
@@ -131,6 +150,6 @@ class BookingController extends Controller
 
     public function success(Booking $booking)
     {
-        return view('booking.success', ['booking' => $booking->load(['customer', 'service', 'slot', 'trainer'])]);
+        return view('catalog.success', ['booking' => $booking->load(['customer', 'service', 'slot', 'trainer'])]);
     }
 }
