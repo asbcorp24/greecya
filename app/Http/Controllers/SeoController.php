@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\GalleryAlbum;
 use App\Models\NewsPost;
+use App\Models\Service;
 use App\Support\SiteSettings;
 
 class SeoController extends Controller
@@ -12,12 +13,20 @@ class SeoController extends Controller
     {
         $staticUrls = collect([
             ['loc' => route('home'), 'priority' => '1.0', 'changefreq' => 'weekly'],
+            ['loc' => route('services.index'), 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['loc' => route('booking.index'), 'priority' => '0.9', 'changefreq' => 'daily'],
             ['loc' => route('catalog.index'), 'priority' => '0.8', 'changefreq' => 'weekly'],
             ['loc' => route('news.index'), 'priority' => '0.8', 'changefreq' => 'daily'],
             ['loc' => route('gallery.index'), 'priority' => '0.7', 'changefreq' => 'weekly'],
             ['loc' => route('privacy'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => route('offer'), 'priority' => '0.3', 'changefreq' => 'yearly'],
+        ]);
+
+        $services = Service::query()->where('is_active', true)->get()->map(fn ($service) => [
+            'loc' => route('services.show', ['service' => $service->slug]),
+            'lastmod' => $service->updated_at?->toAtomString(),
+            'priority' => '0.8',
+            'changefreq' => 'weekly',
         ]);
 
         $news = NewsPost::query()->where('is_published', true)->get()->map(fn ($post) => [
@@ -34,7 +43,7 @@ class SeoController extends Controller
             'changefreq' => 'monthly',
         ]);
 
-        return response()->view('seo.sitemap', ['urls' => $staticUrls->concat($news)->concat($albums)])
+        return response()->view('seo.sitemap', ['urls' => $staticUrls->concat($services)->concat($news)->concat($albums)])
             ->header('Content-Type', 'application/xml; charset=UTF-8');
     }
 
