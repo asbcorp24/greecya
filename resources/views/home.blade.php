@@ -8,7 +8,47 @@
 
 <section class="section-padding intro-section"><div class="container"><div class="row g-4 align-items-end mb-5"><div class="col-lg-7"><div class="eyebrow eyebrow-blue">Комплекс заботы о себе</div><h2 class="section-title">Движение, отдых и восстановление <span>в одном месте</span></h2></div><div class="col-lg-5"><p class="section-text mb-0">Приходите всей семьёй: научиться плавать, поддерживать форму, расслабиться или пройти курс SPA-процедур.</p></div></div><div class="row g-4"><div class="col-md-4"><div class="feature-card"><span><i class="bi bi-droplet"></i></span><h4>Морская вода</h4><p>Комфортная температура 32°C и мягкая атмосфера для занятий и отдыха.</p></div></div><div class="col-md-4"><div class="feature-card"><span><i class="bi bi-person-arms-up"></i></span><h4>Тренеры рядом</h4><p>Обучение плаванию взрослых и детей, индивидуальные и групповые занятия.</p></div></div><div class="col-md-4"><div class="feature-card"><span><i class="bi bi-flower1"></i></span><h4>SPA-восстановление</h4><p>Массаж, прессотерапия, душ Шарко, сауна и соляная комната.</p></div></div></div></div></section>
 
-<section class="section-padding services-section" id="services"><div class="container"><div class="text-center mx-auto section-heading"><div class="eyebrow eyebrow-blue justify-content-center">Выберите свой формат</div><h2 class="section-title">Услуги комплекса</h2></div><div class="row g-4 mt-3">@php($icons=['pool'=>'bi-water','training'=>'bi-stopwatch','spa'=>'bi-flower2','salt'=>'bi-cloud-haze2']) @forelse($services as $service)<div class="col-md-6 col-xl-4"><div class="service-card h-100"><div class="service-icon"><i class="bi {{ $icons[$service->category]??'bi-stars' }}"></i></div><div class="service-meta"><span>{{ $service->duration_minutes }} мин</span><span>до {{ $service->capacity }} чел.</span></div><h3>{{ $service->name }}</h3><p>{{ $service->description }}</p><div class="d-flex justify-content-between align-items-center mt-auto pt-3"><strong class="service-price">от {{ number_format($service->price,0,',',' ') }} ₽</strong><a href="{{ route('booking.index',['service'=>$service->id]) }}" class="circle-link"><i class="bi bi-arrow-up-right"></i></a></div></div></div>@empty<div class="col-12"><div class="alert alert-light">Выполните <code>php artisan db:seed</code>, чтобы заполнить услуги.</div></div>@endforelse</div></div></section>
+<section class="section-padding services-section" id="services">
+    <div class="container">
+        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-5">
+            <div>
+                <div class="eyebrow eyebrow-blue">Выберите свой формат</div>
+                <h2 class="section-title mb-0">Услуги комплекса</h2>
+            </div>
+            <a href="{{ route('services.index') }}" class="btn btn-outline-primary rounded-pill px-4">Все услуги <i class="bi bi-arrow-right ms-2"></i></a>
+        </div>
+        <div class="row g-4">
+            @php($icons=['pool'=>'bi-water','training'=>'bi-stopwatch','spa'=>'bi-flower2','salt'=>'bi-cloud-haze2'])
+            @forelse($services as $service)
+                <div class="col-md-6 col-xl-4">
+                    <article class="service-card h-100 d-flex flex-column">
+                        <a href="{{ route('services.show', $service) }}" class="text-decoration-none text-reset">
+                            @if($service->main_image_path)
+                                <img src="{{ Storage::url($service->main_image_path) }}" alt="{{ $service->name }}" class="w-100 rounded-4 mb-3" style="height:220px;object-fit:cover">
+                            @else
+                                <div class="service-icon"><i class="bi {{ $icons[$service->category]??'bi-stars' }}"></i></div>
+                            @endif
+                            <div class="service-meta"><span>{{ $service->duration_minutes }} мин</span><span>до {{ $service->capacity }} чел.</span></div>
+                            <h3>{{ $service->name }}</h3>
+                        </a>
+                        <p>{{ $service->description }}</p>
+                        <div class="mt-auto pt-3">
+                            <strong class="service-price d-block mb-3">от {{ number_format($service->price,0,',',' ') }} ₽</strong>
+                            <div class="d-flex flex-wrap gap-2">
+                                <a href="{{ route('services.show', $service) }}" class="btn btn-outline-primary rounded-pill flex-grow-1">Подробнее</a>
+                                @if($service->online_booking)
+                                    <a href="{{ route('booking.index',['service'=>$service->id]) }}" class="btn btn-primary rounded-pill flex-grow-1">Записаться</a>
+                                @endif
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            @empty
+                <div class="col-12"><div class="alert alert-light">Услуги пока не добавлены.</div></div>
+            @endforelse
+        </div>
+    </div>
+</section>
 
 @if($trainers->isNotEmpty())<section class="section-padding trainers-section"><div class="container"><div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-5"><div><div class="eyebrow eyebrow-blue">Профессиональная команда</div><h2 class="section-title mb-0">Наши тренеры</h2></div><a href="{{ route('booking.index') }}" class="btn btn-outline-primary rounded-pill px-4">Записаться к тренеру</a></div><div class="row g-4">@foreach($trainers as $trainer)<div class="col-md-6 col-xl-4"><div class="trainer-card">@if($trainer->photo_path)<img src="{{ Storage::url($trainer->photo_path) }}" alt="{{ $trainer->name }}">@else<div class="trainer-placeholder"><i class="bi bi-person"></i></div>@endif<div class="trainer-card-body"><small>{{ $trainer->specialization }}</small><h3>{{ $trainer->name }}</h3><p>{{ Str::limit($trainer->bio,150) }}</p>@if($trainer->experience_years)<span><i class="bi bi-award"></i> Стаж {{ $trainer->experience_years }} лет</span>@endif</div></div></div>@endforeach</div></div></section>@endif
 
