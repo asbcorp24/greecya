@@ -47,7 +47,7 @@ class ServiceCatalogController extends Controller
 
         $related = Service::query()
             ->where('is_active', true)
-            ->whereKeyNot($service->id)
+            ->where('id', '!=', $service->id)
             ->where('category', $service->category)
             ->orderBy('sort_order')
             ->limit(3)
