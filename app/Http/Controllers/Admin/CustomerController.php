@@ -7,8 +7,12 @@ use App\Models\Customer;
 use App\Models\CustomerGoal;
 use App\Models\CustomerNote;
 use App\Models\Trainer;
+use App\Services\CustomerAccessCardService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CustomerController extends Controller
 {
@@ -23,6 +27,98 @@ class CustomerController extends Controller
             ->latest()->paginate(30)->withQueryString();
 
         return view('admin.customers.index', compact('customers'));
+    }
+
+    public function create(Request $request)
+    {
+        abort_unless($request->user()->hasPermission('customers.edit'), 403);
+
+        return view('admin.customers.create', [
+            'sources' => [
+                'manual' => 'Вручную в CRM',
+                'reception' => 'Ресепшен',
+                'phone' => 'Телефонный звонок',
+                'referral' => 'Рекомендация',
+                'corporate' => 'Корпоративный клиент',
+            ],
+        ]);
+    }
+
+    public function store(Request $request, CustomerAccessCardService $accessCards)
+    {
+        abort_unless($request->user()->hasPermission('customers.edit'), 403);
+
+        $data = $request->validate([
+            'last_name' => ['required', 'string', 'max:80'],
+            'first_name' => ['required', 'string', 'max:80'],
+            'patronymic' => ['nullable', 'string', 'max:80'],
+            'phone' => ['required', 'string', 'max:40'],
+            'email' => ['nullable', 'email', 'max:190'],
+            'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
+            'gender' => ['nullable', Rule::in(['male', 'female'])],
+            'emergency_contact' => ['nullable', 'string', 'max:120'],
+            'source' => ['required', Rule::in(['manual', 'reception', 'phone', 'referral', 'corporate'])],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'photo' => ['nullable', 'image', 'max:5120'],
+            'privacy_consent' => ['accepted'],
+            'marketing_consent' => ['nullable', 'boolean'],
+            'issue_qr' => ['nullable', 'boolean'],
+        ]);
+
+        $phone = $this->normalizePhone((string) $data['phone']);
+        if (strlen($phone) < 10) {
+            throw ValidationException::withMessages(['phone' => 'Укажите корректный номер телефона.']);
+        }
+
+        if ($existing = $this->findByNormalizedPhone($phone)) {
+            throw ValidationException::withMessages([
+                'phone' => 'Клиент с таким телефоном уже есть в базе: '.$existing->name.' (ID '.$existing->id.').',
+            ]);
+        }
+
+        $fullName = trim(implode(' ', array_filter([
+            trim((string) $data['last_name']),
+            trim((string) $data['first_name']),
+            trim((string) ($data['patronymic'] ?? '')),
+        ])));
+
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('customers/photos', 'public');
+        }
+
+        try {
+            $customer = DB::transaction(function () use ($data, $phone, $fullName, $photoPath, $request, $accessCards) {
+                $customer = Customer::query()->create([
+                    'name' => $fullName,
+                    'phone' => $phone,
+                    'email' => $data['email'] ?? null,
+                    'birth_date' => $data['birth_date'] ?? null,
+                    'gender' => $data['gender'] ?? null,
+                    'emergency_contact' => $data['emergency_contact'] ?? null,
+                    'source' => $data['source'],
+                    'notes' => $data['notes'] ?? null,
+                    'photo_path' => $photoPath,
+                    'privacy_consent_at' => now(),
+                    'marketing_consent' => $request->boolean('marketing_consent'),
+                ]);
+
+                if ($request->boolean('issue_qr')) {
+                    $accessCards->ensure($customer);
+                }
+
+                return $customer;
+            });
+        } catch (\Throwable $e) {
+            if ($photoPath) {
+                Storage::disk('public')->delete($photoPath);
+            }
+            throw $e;
+        }
+
+        return redirect()
+            ->route('admin.customers.show', $customer)
+            ->with('success', 'Клиент создан.'.($request->boolean('issue_qr') ? ' QR-карта выдана.' : ''));
     }
 
     public function show(Request $request, Customer $customer)
@@ -98,5 +194,17 @@ class CustomerController extends Controller
         ]);
         $goal->update($data);
         return back()->with('success','Прогресс по цели обновлён.');
+    }
+
+    private function normalizePhone(string $phone): string
+    {
+        return preg_replace('/\D+/', '', $phone) ?: '';
+    }
+
+    private function findByNormalizedPhone(string $phone): ?Customer
+    {
+        return Customer::query()
+            ->whereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, '+', ''), ' ', ''), '(', ''), ')', ''), '-', ''), '.', '') = ?", [$phone])
+            ->first();
     }
 }
