@@ -17,6 +17,9 @@
         $robots = $seoPage?->robots ?: (($site['seo_allow_indexing'] ?? true) ? 'index,follow' : 'noindex,nofollow');
         $phoneHref = preg_replace('/[^\d+]/', '', (string) ($site['phone'] ?? ''));
         $mapUrl = $site['map_url'] ?: 'https://yandex.ru/maps/?text='.urlencode($site['address_full'] ?? '');
+        $siteCssVersion = file_exists(public_path('css/site.css')) ? filemtime(public_path('css/site.css')) : 1;
+        $extensionsCssVersion = file_exists(public_path('css/extensions.css')) ? filemtime(public_path('css/extensions.css')) : 1;
+        $servicesCssVersion = file_exists(public_path('css/services.css')) ? filemtime(public_path('css/services.css')) : 1;
     @endphp
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -50,8 +53,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Prata&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="{{ asset('css/site.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/extensions.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/site.css') }}?v={{ $siteCssVersion }}" rel="stylesheet">
+    <link href="{{ asset('css/extensions.css') }}?v={{ $extensionsCssVersion }}" rel="stylesheet">
+    <link href="{{ asset('css/services.css') }}?v={{ $servicesCssVersion }}" rel="stylesheet">
     @stack('styles')
 </head>
 <body>
