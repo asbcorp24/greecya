@@ -150,6 +150,6 @@ class BookingController extends Controller
 
     public function success(Booking $booking)
     {
-        return view('catalog.success', ['booking' => $booking->load(['customer', 'service', 'slot', 'trainer'])]);
+        return view('booking.success', ['booking' => $booking->load(['customer', 'service', 'slot', 'trainer'])]);
     }
 }
