@@ -9,12 +9,25 @@ class Service extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug', 'category', 'description', 'duration_minutes', 'price', 'capacity', 'requires_trainer', 'is_active', 'sort_order'];
+    protected $fillable = [
+        'name', 'slug', 'category', 'description', 'duration_minutes', 'price', 'capacity',
+        'requires_trainer', 'online_booking', 'is_active', 'sort_order',
+    ];
 
-    protected $casts = ['price' => 'decimal:2', 'requires_trainer' => 'boolean', 'is_active' => 'boolean'];
+    protected $casts = [
+        'price' => 'decimal:2',
+        'requires_trainer' => 'boolean',
+        'online_booking' => 'boolean',
+        'is_active' => 'boolean',
+    ];
 
     public function slots()
     {
         return $this->hasMany(ScheduleSlot::class);
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
     }
 }

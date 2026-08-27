@@ -49,6 +49,7 @@ class HelpController extends Controller
         $guide = config('help_admin_menu', []);
         $sections = $guide['sections'] ?? [];
         $posItem = config('help_pos.admin_menu_item');
+        $servicesItem = config('help_services.admin_menu_item');
 
         if ($posItem) {
             foreach ($sections as &$section) {
@@ -69,6 +70,25 @@ class HelpController extends Controller
             unset($section);
         }
 
+        if ($servicesItem) {
+            foreach ($sections as &$section) {
+                if (($section['title'] ?? null) !== 'Финансы и товары') {
+                    continue;
+                }
+
+                $items = $section['items'] ?? [];
+                $position = collect($items)->search(fn (array $item) => ($item['title'] ?? null) === 'Товары и тарифы');
+                if ($position === false) {
+                    $items[] = $servicesItem;
+                } else {
+                    array_splice($items, $position, 0, [$servicesItem]);
+                }
+                $section['items'] = $items;
+                break;
+            }
+            unset($section);
+        }
+
         if (!$sections) {
             return $roles;
         }
@@ -81,7 +101,7 @@ class HelpController extends Controller
                 'Инструкции расположены в том же порядке, что и левое меню CRM.',
                 'Найдите нужный раздел через строку поиска справки и выполняйте шаги сверху вниз.',
             ],
-            'example' => 'Поиск по словам «Бассейн и дорожки», «Продажа», «Касса и платежи», «SEO» или «Роли и права» сразу показывает соответствующую инструкцию.',
+            'example' => 'Поиск по словам «Бассейн и дорожки», «Продажа», «Услуги комплекса», «Касса и платежи», «SEO» или «Роли и права» сразу показывает соответствующую инструкцию.',
             'errors' => [],
         ];
 

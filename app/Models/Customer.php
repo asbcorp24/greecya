@@ -9,8 +9,8 @@ class Customer extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','phone','email','birth_date','notes','source','last_visit_at','photo_path','gender','emergency_contact','marketing_consent'];
-    protected $casts = ['birth_date'=>'date','last_visit_at'=>'datetime','marketing_consent'=>'boolean'];
+    protected $fillable = ['name','phone','email','birth_date','notes','source','last_visit_at','photo_path','gender','emergency_contact','marketing_consent','privacy_consent_at'];
+    protected $casts = ['birth_date'=>'date','last_visit_at'=>'datetime','marketing_consent'=>'boolean','privacy_consent_at'=>'datetime'];
 
     public function user(){ return $this->hasOne(User::class); }
     public function bookings(){ return $this->hasMany(Booking::class); }

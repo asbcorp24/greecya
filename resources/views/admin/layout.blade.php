@@ -96,7 +96,7 @@
                 <a class="{{ request()->routeIs('admin.certificates.*') ? 'active' : '' }}" href="{{ route('admin.certificates.index') }}"><i class="bi bi-gift"></i>Сертификаты</a>
             @endif
 
-            @if($u->hasPermission('cash.view') || $u->hasPermission('inventory.view') || $u->hasPermission('accounting.manage') || $u->hasPermission('products.view'))
+            @if($u->hasPermission('cash.view') || $u->hasPermission('inventory.view') || $u->hasPermission('accounting.manage') || $u->hasPermission('products.view') || $u->hasPermission('services.view'))
                 <div class="nav-caption">Финансы и товары</div>
             @endif
             @if($u->hasPermission('cash.view'))
@@ -104,6 +104,9 @@
             @endif
             @if($u->hasPermission('accounting.manage'))
                 <a class="{{ request()->routeIs('admin.accounting.*') ? 'active' : '' }}" href="{{ route('admin.accounting.index') }}"><i class="bi bi-arrow-left-right"></i>Обмен с 1С</a>
+            @endif
+            @if($u->hasPermission('services.view'))
+                <a class="{{ request()->routeIs('admin.services.*') ? 'active' : '' }}" href="{{ route('admin.services.index') }}"><i class="bi bi-stars"></i>Услуги комплекса</a>
             @endif
             @if($u->hasPermission('products.view'))
                 <a class="{{ request()->routeIs('admin.products.*') ? 'active' : '' }}" href="{{ route('admin.products.index') }}"><i class="bi bi-ticket-perforated"></i>Товары и тарифы</a>
