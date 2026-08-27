@@ -1,8 +1,44 @@
 @extends('admin.layout')
 @section('title','Клиенты') @section('heading','Клиентская база') @section('eyebrow','CRM 360°')
 @section('content')
-<div class="admin-card"><div class="admin-card-header flex-wrap gap-3"><div><h3>Клиенты</h3><p>Записи, покупки, посещения, семья, абонементы и история взаимодействий</p></div><form class="d-flex gap-2"><input class="form-control" name="q" value="{{ request('q') }}" placeholder="Имя, телефон или email"><button class="btn btn-primary"><i class="bi bi-search"></i></button></form></div><div class="table-responsive"><table class="table admin-table align-middle"><thead><tr><th>Клиент</th><th>Контакты</th><th>Записи</th><th>Посещения</th><th>Заказы</th><th>Источник</th><th></th></tr></thead><tbody>
-@forelse($customers as $customer)<tr><td><strong>{{ $customer->name }}</strong>@if($customer->birth_date)<small>{{ $customer->birth_date->format('d.m.Y') }}</small>@endif</td><td>@if(auth()->user()->canSeePersonalData())<a href="tel:{{ $customer->phone }}">{{ $customer->phone }}</a><small>{{ $customer->email }}</small>@else<span class="text-muted">Скрыто правами доступа</span>@endif</td><td><span class="count-badge">{{ $customer->bookings_count }}</span></td><td><span class="count-badge">{{ $customer->visits_count }}</span></td><td><span class="count-badge">{{ $customer->orders_count }}</span></td><td>{{ $customer->source }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.customers.show',$customer) }}">360°</a></td></tr>
-@empty<tr><td colspan="7" class="text-center py-5 text-muted">Клиенты не найдены</td></tr>@endforelse
-</tbody></table></div><div class="p-3">{{ $customers->links() }}</div></div>
+<div class="admin-card">
+    <div class="admin-card-header flex-wrap gap-3">
+        <div>
+            <h3>Клиенты</h3>
+            <p>Записи, покупки, посещения, семья, абонементы и история взаимодействий</p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            @if(auth()->user()->hasPermission('customers.edit'))
+                <a class="btn btn-success" href="{{ route('admin.customers.create') }}">
+                    <i class="bi bi-person-plus me-1"></i>Новый клиент
+                </a>
+            @endif
+            <form class="d-flex gap-2">
+                <input class="form-control" name="q" value="{{ request('q') }}" placeholder="Имя, телефон или email">
+                <button class="btn btn-primary"><i class="bi bi-search"></i></button>
+            </form>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table align-middle">
+            <thead><tr><th>Клиент</th><th>Контакты</th><th>Записи</th><th>Посещения</th><th>Заказы</th><th>Источник</th><th></th></tr></thead>
+            <tbody>
+            @forelse($customers as $customer)
+                <tr>
+                    <td><strong>{{ $customer->name }}</strong>@if($customer->birth_date)<small>{{ $customer->birth_date->format('d.m.Y') }}</small>@endif</td>
+                    <td>@if(auth()->user()->canSeePersonalData())<a href="tel:{{ $customer->phone }}">{{ $customer->phone }}</a><small>{{ $customer->email }}</small>@else<span class="text-muted">Скрыто правами доступа</span>@endif</td>
+                    <td><span class="count-badge">{{ $customer->bookings_count }}</span></td>
+                    <td><span class="count-badge">{{ $customer->visits_count }}</span></td>
+                    <td><span class="count-badge">{{ $customer->orders_count }}</span></td>
+                    <td>{{ $customer->source }}</td>
+                    <td><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.customers.show',$customer) }}">360°</a></td>
+                </tr>
+            @empty
+                <tr><td colspan="7" class="text-center py-5 text-muted">Клиенты не найдены</td></tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+    <div class="p-3">{{ $customers->links() }}</div>
+</div>
 @endsection
