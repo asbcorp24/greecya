@@ -8,14 +8,16 @@ use App\Models\NewsPost;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Trainer;
+use App\Services\PublicDiscountService;
 
 class HomeController extends Controller
 {
-    public function __invoke()
+    public function __invoke(PublicDiscountService $discounts)
     {
         return view('home', [
             'slides' => HeroSlide::query()->where('is_active', true)->orderBy('sort_order')->get(),
             'services' => Service::query()->where('is_active', true)->orderBy('sort_order')->get(),
+            'discounts' => $discounts->forHomepage(),
             'products' => Product::query()->where('is_active', true)->orderBy('sort_order')->take(3)->get(),
             'trainers' => Trainer::query()->where('is_active', true)->orderBy('sort_order')->take(6)->get(),
             'latestNews' => NewsPost::query()->where('is_published', true)->where(fn ($q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()))->latest('published_at')->take(3)->get(),
