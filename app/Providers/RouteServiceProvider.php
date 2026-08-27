@@ -18,6 +18,8 @@ class RouteServiceProvider extends ServiceProvider
 
         $this->routes(function () {
             Route::middleware('api')->prefix('api')->group(base_path('routes/api.php'));
+            // Static /admin/customers/create must be registered before /admin/customers/{customer} from web.php.
+            Route::middleware('web')->group(base_path('routes/customers.php'));
             Route::middleware('web')->group(base_path('routes/web.php'));
             Route::middleware('web')->group(base_path('routes/account.php'));
             Route::middleware('web')->group(base_path('routes/advanced.php'));
