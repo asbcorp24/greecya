@@ -19,27 +19,27 @@
     $cover = $service->main_image_path ?: optional($service->photos->first())->image_path;
 @endphp
 
-<section class="service-detail-hero {{ $cover ? 'has-cover' : '' }}" @if($cover) style="background-image:linear-gradient(90deg,rgba(2,31,43,.9),rgba(2,31,43,.55) 58%,rgba(2,31,43,.2)),url('{{ Storage::url($cover) }}')" @endif>
+<section class="service-detail-hero text-white {{ $cover ? 'has-cover' : '' }}" @if($cover) style="background-image:linear-gradient(90deg,rgba(2,31,43,.96) 0%,rgba(2,31,43,.90) 52%,rgba(2,31,43,.74) 100%),url('{{ Storage::url($cover) }}')" @endif>
     <div class="container py-5 position-relative">
         <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb service-breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="{{ route('home') }}">Главная</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('services.index') }}">Услуги</a></li>
-                <li class="breadcrumb-item active" aria-current="page">{{ $service->name }}</li>
+                <li class="breadcrumb-item"><a class="text-white text-decoration-none" href="{{ route('home') }}">Главная</a></li>
+                <li class="breadcrumb-item"><a class="text-white text-decoration-none" href="{{ route('services.index') }}">Услуги</a></li>
+                <li class="breadcrumb-item active text-white-50" aria-current="page">{{ $service->name }}</li>
             </ol>
         </nav>
         <div class="row align-items-end g-5">
             <div class="col-lg-8">
-                <span class="service-detail-category">{{ $categoryLabels[$service->category] ?? $service->category }}</span>
-                <h1>{{ $service->name }}</h1>
+                <span class="service-detail-category text-white">{{ $categoryLabels[$service->category] ?? $service->category }}</span>
+                <h1 class="text-white" style="text-shadow:0 3px 18px rgba(0,0,0,.45)">{{ $service->name }}</h1>
                 @if($service->description)
-                    <p class="service-detail-lead">{{ Str::limit($service->description, 260) }}</p>
+                    <p class="service-detail-lead text-white">{{ Str::limit($service->description, 260) }}</p>
                 @endif
             </div>
             <div class="col-lg-4">
-                <div class="service-price-panel">
-                    <small>Стоимость</small>
-                    <strong>{{ number_format((float)$service->price, 0, ',', ' ') }} ₽</strong>
+                <div class="service-price-panel bg-white text-dark shadow-lg border border-white">
+                    <small class="text-secondary">Стоимость</small>
+                    <strong class="text-primary">{{ number_format((float)$service->price, 0, ',', ' ') }} ₽</strong>
                     @if($service->online_booking)
                         <a href="{{ route('booking.index', ['service' => $service->id]) }}" class="btn btn-primary btn-lg rounded-pill w-100">Записаться онлайн</a>
                     @else
