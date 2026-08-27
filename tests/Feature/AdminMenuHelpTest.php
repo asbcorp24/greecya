@@ -28,8 +28,11 @@ class AdminMenuHelpTest extends TestCase
         if ($posItem = config('help_pos.admin_menu_item')) {
             $items->push($posItem);
         }
+        if ($servicesItem = config('help_services.admin_menu_item')) {
+            $items->push($servicesItem);
+        }
 
-        $this->assertCount(40, $items, 'Руководство должно покрывать 37 рабочих и 3 служебных пункта меню.');
+        $this->assertCount(41, $items, 'Руководство должно покрывать 38 рабочих и 3 служебных пункта меню.');
 
         foreach ($items as $item) {
             $this->assertNotEmpty($item['purpose'] ?? null, 'Нет назначения для '.$item['title']);
@@ -54,6 +57,7 @@ class AdminMenuHelpTest extends TestCase
             ->assertSee('Бассейн и проход → Бассейн и дорожки')
             ->assertSee('Клиенты и продажи → Клиенты 360°')
             ->assertSee('Клиенты и продажи → Продажа')
+            ->assertSee('Финансы и товары → Услуги комплекса')
             ->assertSee('Финансы и товары → Касса и платежи')
             ->assertSee('Управление → Роли и права')
             ->assertSee('Сайт → Фотогалерея')
