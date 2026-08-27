@@ -10,7 +10,7 @@ class Service extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'slug', 'category', 'description', 'duration_minutes', 'price', 'capacity',
+        'name', 'slug', 'category', 'description', 'main_image_path', 'duration_minutes', 'price', 'capacity',
         'requires_trainer', 'online_booking', 'is_active', 'sort_order',
     ];
 
@@ -29,5 +29,15 @@ class Service extends Model
     public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function photos()
+    {
+        return $this->hasMany(ServicePhoto::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function publicPhotos()
+    {
+        return $this->photos()->where('is_active', true);
     }
 }
