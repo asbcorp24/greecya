@@ -11,7 +11,7 @@ class ServiceCatalogController extends Controller
     {
         $services = Service::query()
             ->where('is_active', true)
-            ->with(['photos' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order')->limit(1)])
+            ->with(['photos' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order')->orderBy('id')])
             ->when($request->filled('category'), fn ($query) => $query->where('category', $request->string('category')))
             ->orderBy('sort_order')
             ->orderBy('name')
