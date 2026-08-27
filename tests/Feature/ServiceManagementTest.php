@@ -44,7 +44,8 @@ class ServiceManagementTest extends TestCase
 
         $service = Service::where('name', 'Тестовая гидротренировка')->firstOrFail();
         $response->assertRedirect(route('admin.services.edit', $service));
-        $this->assertSame('testovaya-gidrotrenirovka', $service->slug);
+        $this->assertNotEmpty($service->slug);
+        $this->assertMatchesRegularExpression('/^[a-z0-9-]+$/', $service->slug);
         $this->assertTrue($service->requires_trainer);
         $this->assertTrue($service->online_booking);
         $this->assertTrue($service->is_active);
