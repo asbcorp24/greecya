@@ -67,7 +67,7 @@
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="mainNav">
             <ul class="navbar-nav ms-auto align-items-xl-center gap-xl-1">
-                <li class="nav-item"><a class="nav-link" href="{{ route('home') }}#services">Услуги</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ route('services.index') }}">Услуги</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ route('news.index') }}">Новости</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ route('gallery.index') }}">Фотогалерея</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ route('catalog.index') }}">Билеты</a></li>
@@ -103,7 +103,7 @@
                 <a class="navbar-brand text-white d-inline-flex align-items-center gap-2 mb-3" href="{{ route('home') }}"><span class="brand-mark brand-mark-light"><span>Γ</span></span><span><strong>{{ $site['site_short_name'] }}</strong><small>{{ $site['site_tagline'] }}</small></span></a>
                 <p class="text-white-50 mb-0">{{ $site['footer_text'] }}</p>
             </div>
-            <div class="col-6 col-lg-2"><h6>Разделы</h6><a href="{{ route('home') }}#services">Услуги</a><a href="{{ route('news.index') }}">Новости</a><a href="{{ route('gallery.index') }}">Фотогалерея</a><a href="{{ route('booking.index') }}">Онлайн-запись</a></div>
+            <div class="col-6 col-lg-2"><h6>Разделы</h6><a href="{{ route('services.index') }}">Услуги</a><a href="{{ route('news.index') }}">Новости</a><a href="{{ route('gallery.index') }}">Фотогалерея</a><a href="{{ route('booking.index') }}">Онлайн-запись</a></div>
             <div class="col-6 col-lg-2"><h6>Клиентам</h6><a href="{{ route('catalog.index') }}">Билеты и сертификаты</a><a href="{{ route('account.register') }}">Личный кабинет</a><a href="{{ route('privacy') }}">Конфиденциальность</a><a href="{{ route('offer') }}">Публичная оферта</a></div>
             <div class="col-lg-4">
                 <h6>Контакты</h6>
