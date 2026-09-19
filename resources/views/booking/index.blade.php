@@ -9,7 +9,7 @@
             <div class="row g-4">
                 <div class="col-md-7"><label class="form-label">Услуга</label><select class="form-select form-select-lg" id="serviceSelect" name="service_id" required><option value="">Выберите услугу</option>@foreach($services as $service)<option value="{{ $service->id }}" @selected(old('service_id', $selectedService) == $service->id)>{{ $service->name }} — от {{ number_format($service->price, 0, ',', ' ') }} ₽</option>@endforeach</select></div>
                 <div class="col-md-5"><label class="form-label">Дата</label><input type="date" class="form-control form-control-lg" id="bookingDate" name="date" min="{{ now()->toDateString() }}" value="{{ old('date', now()->addDay()->toDateString()) }}" required></div>
-                <div class="col-12"><label class="form-label d-flex justify-content-between"><span>Свободное время</span><small class="text-muted" id="slotHint">Сначала выберите услугу и дату</small></label><div id="slotsContainer" class="slots-grid"><div class="slot-empty"><i class="bi bi-calendar2-week"></i><span>Здесь появятся доступные часы</span></div></div><input type="hidden" name="schedule_slot_id" id="slotInput" value="{{ old('schedule_slot_id') }}"></div>
+                <div class="col-12"><label class="form-label d-flex justify-content-between"><span>Свободное время</span><small class="text-muted" id="slotHint">Сначала выберите услугу и дату</small></label><div id="slotsContainer" class="slots-grid"><div class="slot-empty"><i class="bi bi-calendar2-week"></i><span>Здесь появятся доступные часы</span></div></div><input type="hidden" name="schedule_slot_id" id="slotInput" value="{{ old('schedule_slot_id') }}"><input type="hidden" name="requested_time" id="requestedTime" value="{{ old('requested_time') }}"></div>
                 <div class="col-12"><hr><h4 class="mb-1">Контактные данные</h4><p class="text-muted">Нужны для подтверждения записи.</p></div>
                 <div class="col-md-6"><label class="form-label">Имя</label><input class="form-control form-control-lg" name="name" value="{{ old('name') }}" required></div>
                 <div class="col-md-6"><label class="form-label">Телефон</label><input class="form-control form-control-lg" name="phone" value="{{ old('phone') }}" placeholder="+7 ___ ___-__-__" required></div>
@@ -31,25 +31,75 @@
     const container = document.getElementById('slotsContainer');
     const hint = document.getElementById('slotHint');
     const input = document.getElementById('slotInput');
+    const requestedTime = document.getElementById('requestedTime');
     const submit = document.getElementById('bookingSubmit');
     const endpoint = @json(route('booking.slots'));
     const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
     const money = value => new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(value)+' ₽';
 
     async function loadSlots() {
-        input.value = ''; submit.disabled = true;
+        input.value = '';
+        requestedTime.value = '';
+        submit.disabled = true;
         if (!service.value || !date.value) return;
+
         container.innerHTML = '<div class="slot-empty"><span class="spinner-border spinner-border-sm"></span><span>Проверяем расписание…</span></div>';
         hint.textContent = 'Загрузка';
+
         try {
             const response = await fetch(`${endpoint}?service_id=${encodeURIComponent(service.value)}&date=${encodeURIComponent(date.value)}`, {headers: {'Accept': 'application/json'}});
             if (!response.ok) throw new Error('Не удалось загрузить расписание');
-            const slots = await response.json();
-            if (!slots.length) { container.innerHTML = '<div class="slot-empty"><i class="bi bi-calendar-x"></i><span>На эту дату свободного времени нет. Выберите другой день.</span></div>'; hint.textContent = 'Нет мест'; return; }
+
+            const payload = await response.json();
+
+            if (!Array.isArray(payload) && payload.unrestricted) {
+                hint.textContent = 'Без ограничений';
+                container.innerHTML = `
+                    <div class="slot-empty w-100 align-items-stretch text-start">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-infinity fs-4 text-primary"></i>
+                            <strong>Любое время свободно</strong>
+                        </div>
+                        <label class="form-label mb-1" for="freeTimePicker">Выберите удобное время</label>
+                        <input type="time" class="form-control form-control-lg" id="freeTimePicker" step="60">
+                        <small class="text-muted mt-2">Продолжительность услуги: ${escapeHtml(payload.duration_minutes)} мин. Итоговая цена будет рассчитана при записи с учётом выбранного времени.</small>
+                    </div>
+                `;
+
+                const picker = document.getElementById('freeTimePicker');
+                picker.addEventListener('input', () => {
+                    requestedTime.value = picker.value;
+                    input.value = '';
+                    submit.disabled = !picker.value;
+                });
+                return;
+            }
+
+            const slots = payload;
+            if (!slots.length) {
+                container.innerHTML = '<div class="slot-empty"><i class="bi bi-calendar-x"></i><span>На эту дату свободного времени нет. Выберите другой день.</span></div>';
+                hint.textContent = 'Нет мест';
+                return;
+            }
+
             hint.textContent = `Доступно: ${slots.length}`;
-            container.innerHTML = slots.map(slot => { const changed = Number(slot.price)!==Number(slot.base_price); const rules=(slot.pricing_rules||[]).map(escapeHtml).join(' · '); return `<button type="button" class="slot-button" data-slot="${slot.id}"><strong>${escapeHtml(slot.time)} · ${money(slot.price)}</strong><small>до ${escapeHtml(slot.ends_at)} · мест: ${slot.places}${changed ? ` · <s>${money(slot.base_price)}</s>` : ''}</small>${slot.trainer ? `<span>${escapeHtml(slot.trainer)}</span>` : ''}${rules ? `<span class="text-success">${rules}</span>` : ''}</button>`; }).join('');
-            container.querySelectorAll('.slot-button').forEach(button => button.addEventListener('click', () => { container.querySelectorAll('.slot-button').forEach(item => item.classList.remove('active')); button.classList.add('active'); input.value = button.dataset.slot; submit.disabled = false; }));
-        } catch (error) { container.innerHTML = `<div class="slot-empty text-danger"><i class="bi bi-exclamation-circle"></i><span>${escapeHtml(error.message)}</span></div>`; hint.textContent = 'Ошибка'; }
+            container.innerHTML = slots.map(slot => {
+                const changed = Number(slot.price)!==Number(slot.base_price);
+                const rules=(slot.pricing_rules||[]).map(escapeHtml).join(' · ');
+                return `<button type="button" class="slot-button" data-slot="${slot.id}"><strong>${escapeHtml(slot.time)} · ${money(slot.price)}</strong><small>до ${escapeHtml(slot.ends_at)} · мест: ${slot.places}${changed ? ` · <s>${money(slot.base_price)}</s>` : ''}</small>${slot.trainer ? `<span>${escapeHtml(slot.trainer)}</span>` : ''}${rules ? `<span class="text-success">${rules}</span>` : ''}</button>`;
+            }).join('');
+
+            container.querySelectorAll('.slot-button').forEach(button => button.addEventListener('click', () => {
+                container.querySelectorAll('.slot-button').forEach(item => item.classList.remove('active'));
+                button.classList.add('active');
+                input.value = button.dataset.slot;
+                requestedTime.value = '';
+                submit.disabled = false;
+            }));
+        } catch (error) {
+            container.innerHTML = `<div class="slot-empty text-danger"><i class="bi bi-exclamation-circle"></i><span>${escapeHtml(error.message)}</span></div>`;
+            hint.textContent = 'Ошибка';
+        }
     }
     service.addEventListener('change', loadSlots); date.addEventListener('change', loadSlots); if (service.value && date.value) loadSlots();
 })();
