@@ -38,7 +38,7 @@ class UnrestrictedBookingTest extends TestCase
             ->get(route('admin.schedule.index'))
             ->assertOk()
             ->assertSee('Без ограничений')
-            ->assertSee('Любое время');
+            ->assertSee('любое время');
     }
 
     public function test_unrestricted_service_returns_free_time_mode_instead_of_slots(): void
