@@ -8,19 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('services', function (Blueprint $table) {
-            if (! Schema::hasColumn('services', 'unrestricted_booking')) {
+        if (Schema::hasTable('services') && ! Schema::hasColumn('services', 'unrestricted_booking')) {
+            Schema::table('services', function (Blueprint $table) {
                 $table->boolean('unrestricted_booking')->default(false)->after('online_booking')->index();
-            }
-        });
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('services', function (Blueprint $table) {
-            if (Schema::hasColumn('services', 'unrestricted_booking')) {
+        if (Schema::hasTable('services') && Schema::hasColumn('services', 'unrestricted_booking')) {
+            Schema::table('services', function (Blueprint $table) {
                 $table->dropColumn('unrestricted_booking');
-            }
-        });
+            });
+        }
     }
 };
