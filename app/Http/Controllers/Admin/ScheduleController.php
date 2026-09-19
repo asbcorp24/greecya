@@ -13,7 +13,15 @@ class ScheduleController extends Controller
     public function index(Request $request)
     {
         return view('admin.schedule.index', [
-            'slots' => ScheduleSlot::query()->with(['service', 'trainer'])->where('starts_at', '>=', now()->startOfDay())->orderBy('starts_at')->paginate(30),
+            'slots' => ScheduleSlot::query()
+                ->with(['service', 'trainer'])
+                ->where('starts_at', '>=', now()->startOfDay())
+                ->where(function ($query) {
+                    $query->whereNull('session_type')
+                        ->orWhere('session_type', '!=', 'unrestricted_booking');
+                })
+                ->orderBy('starts_at')
+                ->paginate(30),
             'services' => Service::query()->where('is_active', true)->orderBy('name')->get(),
             'trainers' => Trainer::query()->where('is_active', true)->orderBy('name')->get(),
         ]);
@@ -32,6 +40,22 @@ class ScheduleController extends Controller
         ScheduleSlot::query()->create($data + ['booked_count' => 0, 'status' => 'open']);
 
         return back()->with('success', 'Время добавлено в расписание.');
+    }
+
+    public function updateUnrestricted(Request $request, Service $service)
+    {
+        abort_unless($service->is_active, 404);
+
+        $service->update([
+            'unrestricted_booking' => $request->boolean('unrestricted_booking'),
+        ]);
+
+        return back()->with(
+            'success',
+            $service->unrestricted_booking
+                ? 'Для услуги «'.$service->name.'» включена запись без ограничений: посетитель может выбрать любое время.'
+                : 'Для услуги «'.$service->name.'» снова используется обычное расписание со слотами.'
+        );
     }
 
     public function destroy(ScheduleSlot $slot)

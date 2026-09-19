@@ -8,6 +8,7 @@ use App\Models\PoolZone;
 use App\Models\ScheduleSlot;
 use App\Models\Service;
 use App\Services\DynamicPricingService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -46,6 +47,15 @@ class BookingController extends Controller
 
         $customer = $request->user()?->role === 'customer' ? $request->user()->customer : null;
 
+        if ($service->unrestricted_booking) {
+            return response()->json([
+                'unrestricted' => true,
+                'duration_minutes' => (int) $service->duration_minutes,
+                'base_price' => (float) $service->price,
+                'message' => 'Для этой услуги доступна запись без ограничений. Выберите любое удобное время.',
+            ]);
+        }
+
         $slots = ScheduleSlot::query()
             ->with(['trainer:id,name,specialization','service:id,price'])
             ->where('service_id', $service->id)
@@ -53,6 +63,10 @@ class BookingController extends Controller
             ->where('starts_at', '>', now())
             ->where('status', 'open')
             ->whereColumn('booked_count', '<', 'capacity')
+            ->where(function ($query) {
+                $query->whereNull('session_type')
+                    ->orWhere('session_type', '!=', 'unrestricted_booking');
+            })
             ->where(function ($query) {
                 $query->whereNull('pool_zone_id')
                     ->orWhereExists(function ($subquery) {
@@ -86,8 +100,9 @@ class BookingController extends Controller
     {
         $data = $request->validate([
             'service_id' => ['required', 'exists:services,id'],
-            'date' => ['required', 'date'],
-            'schedule_slot_id' => ['required', 'exists:schedule_slots,id'],
+            'date' => ['required', 'date', 'after_or_equal:today'],
+            'schedule_slot_id' => ['nullable', 'exists:schedule_slots,id'],
+            'requested_time' => ['nullable', 'date_format:H:i'],
             'name' => ['required', 'string', 'max:120'],
             'phone' => ['required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:190'],
@@ -96,23 +111,25 @@ class BookingController extends Controller
             'privacy' => ['accepted'],
         ]);
 
-        $booking = DB::transaction(function () use ($data, $pricing) {
-            $slot = ScheduleSlot::query()->with('service')->lockForUpdate()->findOrFail($data['schedule_slot_id']);
+        $service = Service::query()
+            ->whereKey($data['service_id'])
+            ->where('is_active', true)
+            ->where('online_booking', true)
+            ->first();
 
-            $poolAvailable = !$slot->pool_zone_id
-                || PoolZone::query()
-                    ->whereKey($slot->pool_zone_id)
-                    ->where('is_active', true)
-                    ->exists();
+        if (! $service) {
+            throw ValidationException::withMessages(['service_id' => 'Эта услуга сейчас недоступна для онлайн-записи.']);
+        }
 
-            $serviceAvailable = $slot->service
-                && $slot->service->is_active
-                && $slot->service->online_booking;
+        if ($service->unrestricted_booking && empty($data['requested_time'])) {
+            throw ValidationException::withMessages(['requested_time' => 'Выберите удобное время.']);
+        }
 
-            if ((int) $data['service_id'] !== $slot->service_id || ! $serviceAvailable || ! $poolAvailable || $slot->status !== 'open' || $slot->starts_at->isPast() || $slot->available_places < $data['people']) {
-                throw ValidationException::withMessages(['schedule_slot_id' => 'Выбранное время уже занято, услуга или бассейн недоступны либо слот не относится к выбранной услуге. Пожалуйста, выберите другое время.']);
-            }
+        if (! $service->unrestricted_booking && empty($data['schedule_slot_id'])) {
+            throw ValidationException::withMessages(['schedule_slot_id' => 'Выберите свободное время из расписания.']);
+        }
 
+        $booking = DB::transaction(function () use ($data, $pricing, $service) {
             $phone = preg_replace('/\D+/', '', $data['phone']);
             if (strlen($phone) < 10) {
                 throw ValidationException::withMessages(['phone' => 'Укажите корректный номер телефона.']);
@@ -122,13 +139,81 @@ class BookingController extends Controller
                 ['phone' => $phone],
                 ['name' => $data['name'], 'email' => $data['email'] ?? null, 'source' => 'site']
             );
-            $quote = $pricing->forService($slot->service, $slot, $customer);
-            $people = (int)$data['people'];
+
+            $people = (int) $data['people'];
+
+            if ($service->unrestricted_booking) {
+                $requestedStart = Carbon::createFromFormat(
+                    'Y-m-d H:i',
+                    $data['date'].' '.$data['requested_time'],
+                    config('app.timezone')
+                )->seconds(0);
+
+                if ($requestedStart->lte(now())) {
+                    throw ValidationException::withMessages(['requested_time' => 'Выберите время в будущем.']);
+                }
+
+                $requestedEnd = $requestedStart->copy()->addMinutes(max(1, (int) $service->duration_minutes));
+
+                // Для динамической цены учитываем выбранные дату и время, но не применяем
+                // скидки/наценки по загрузке: у режима без ограничений нет лимита мест.
+                $pricingSlot = new ScheduleSlot([
+                    'starts_at' => $requestedStart,
+                    'ends_at' => $requestedEnd,
+                    'capacity' => 0,
+                    'booked_count' => 0,
+                ]);
+                $pricingSlot->setRelation('service', $service);
+                $quote = $pricing->forService($service, $pricingSlot, $customer);
+
+                // Технический слот сохраняет точное выбранное клиентом время для CRM,
+                // но не участвует в обычной выдаче свободных слотов.
+                $slot = ScheduleSlot::query()->create([
+                    'service_id' => $service->id,
+                    'trainer_id' => null,
+                    'pool_zone_id' => null,
+                    'session_type' => 'unrestricted_booking',
+                    'starts_at' => $requestedStart,
+                    'ends_at' => $requestedEnd,
+                    'capacity' => $people,
+                    'booked_count' => $people,
+                    'status' => 'closed',
+                    'online_booking' => false,
+                ]);
+            } else {
+                $slot = ScheduleSlot::query()
+                    ->with('service')
+                    ->lockForUpdate()
+                    ->findOrFail($data['schedule_slot_id']);
+
+                $poolAvailable = ! $slot->pool_zone_id
+                    || PoolZone::query()
+                        ->whereKey($slot->pool_zone_id)
+                        ->where('is_active', true)
+                        ->exists();
+
+                $serviceAvailable = $slot->service
+                    && $slot->service->is_active
+                    && $slot->service->online_booking;
+
+                if ((int) $data['service_id'] !== $slot->service_id
+                    || ! $serviceAvailable
+                    || ! $poolAvailable
+                    || $slot->status !== 'open'
+                    || $slot->starts_at->isPast()
+                    || $slot->available_places < $people) {
+                    throw ValidationException::withMessages([
+                        'schedule_slot_id' => 'Выбранное время уже занято, услуга или бассейн недоступны либо слот не относится к выбранной услуге. Пожалуйста, выберите другое время.',
+                    ]);
+                }
+
+                $quote = $pricing->forService($slot->service, $slot, $customer);
+            }
 
             $booking = Booking::query()->create([
                 'public_id' => (string) Str::uuid(),
                 'customer_id' => $customer->id,
-                'service_id' => $slot->service_id,
+                'service_id' => $service->id,
                 'schedule_slot_id' => $slot->id,
                 'trainer_id' => $slot->trainer_id,
                 'people' => $people,
@@ -141,7 +226,10 @@ class BookingController extends Controller
                 'source' => 'site',
             ]);
 
-            $slot->increment('booked_count', $people);
+            if (! $service->unrestricted_booking) {
+                $slot->increment('booked_count', $people);
+            }
+
             return $booking;
         });
 

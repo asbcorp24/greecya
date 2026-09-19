@@ -11,13 +11,14 @@ class Service extends Model
 
     protected $fillable = [
         'name', 'slug', 'category', 'description', 'main_image_path', 'duration_minutes', 'price', 'capacity',
-        'requires_trainer', 'online_booking', 'is_active', 'sort_order',
+        'requires_trainer', 'online_booking', 'unrestricted_booking', 'is_active', 'sort_order',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'requires_trainer' => 'boolean',
         'online_booking' => 'boolean',
+        'unrestricted_booking' => 'boolean',
         'is_active' => 'boolean',
     ];
 
