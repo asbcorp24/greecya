@@ -59,6 +59,6 @@ return [
         'admin.leads.index'=>['*'=>'leads.view'],'admin.leads.*'=>['*'=>'leads.manage'],'admin.inventory.index'=>['*'=>'inventory.view'],'admin.inventory.*'=>['*'=>'inventory.manage'],
         'admin.staff.index'=>['*'=>'staff.view'],'admin.staff.payroll.*'=>['*'=>'payroll.manage'],'admin.staff.*'=>['*'=>'staff.manage'],'admin.training-plans.*'=>['*'=>'training.manage'],
         'admin.crm-plus.index'=>['*'=>'crm_plus.view'],'admin.crm-plus.campaigns.*'=>['*'=>'marketing.manage'],'admin.crm-plus.*'=>['*'=>'crm_plus.manage'],'admin.reports.*'=>['*'=>'reports.view'],
-        'admin.news.*'=>['*'=>'content.manage'],'admin.gallery.*'=>['*'=>'content.manage'],'admin.slides.*'=>['*'=>'content.manage'],'admin.trainers.*'=>['*'=>'content.manage'],'admin.settings.*'=>['*'=>'settings.manage'],'admin.seo.*'=>['*'=>'seo.manage'],
+        'admin.news.*'=>['*'=>'content.manage'],'admin.gallery.*'=>['*'=>'content.manage'],'admin.panoramas.*'=>['*'=>'content.manage'],'admin.slides.*'=>['*'=>'content.manage'],'admin.trainers.*'=>['*'=>'content.manage'],'admin.settings.*'=>['*'=>'settings.manage'],'admin.seo.*'=>['*'=>'seo.manage'],
     ],
 ];
