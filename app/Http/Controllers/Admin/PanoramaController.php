@@ -69,7 +69,7 @@ class PanoramaController extends Controller
         DB::transaction(function () use ($request, $data, $panorama, $makeHomepage, $newImagePath) {
             if ($makeHomepage) {
                 Panorama::query()
-                    ->whereKeyNot($panorama->id)
+                    ->where('id', '!=', $panorama->id)
                     ->update(['is_homepage' => false]);
             }
 
