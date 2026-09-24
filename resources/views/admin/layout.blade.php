@@ -146,6 +146,7 @@
                 <a class="{{ request()->routeIs('admin.slides.*') ? 'active' : '' }}" href="{{ route('admin.slides.index') }}"><i class="bi bi-card-image"></i>Слайдер</a>
                 <a class="{{ request()->routeIs('admin.news.*') ? 'active' : '' }}" href="{{ route('admin.news.index') }}"><i class="bi bi-newspaper"></i>Новости</a>
                 <a class="{{ request()->routeIs('admin.gallery.*') ? 'active' : '' }}" href="{{ route('admin.gallery.index') }}"><i class="bi bi-images"></i>Фотогалерея</a>
+                <a class="{{ request()->routeIs('admin.panoramas.*') ? 'active' : '' }}" href="{{ route('admin.panoramas.index') }}"><i class="bi bi-badge-3d"></i>360° панорамы</a>
             @endif
 
             @if($u->hasPermission('settings.manage') || $u->hasPermission('seo.manage'))
