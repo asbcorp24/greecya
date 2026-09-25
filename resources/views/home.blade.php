@@ -8,6 +8,8 @@
 
 <section class="section-padding intro-section"><div class="container"><div class="row g-4 align-items-end mb-5"><div class="col-lg-7"><div class="eyebrow eyebrow-blue">Комплекс заботы о себе</div><h2 class="section-title">Движение, отдых и восстановление <span>в одном месте</span></h2></div><div class="col-lg-5"><p class="section-text mb-0">Приходите всей семьёй: научиться плавать, поддерживать форму, расслабиться или пройти курс SPA-процедур.</p></div></div><div class="row g-4"><div class="col-md-4"><div class="feature-card"><span><i class="bi bi-droplet"></i></span><h4>Морская вода</h4><p>Комфортная температура 32°C и мягкая атмосфера для занятий и отдыха.</p></div></div><div class="col-md-4"><div class="feature-card"><span><i class="bi bi-person-arms-up"></i></span><h4>Тренеры рядом</h4><p>Обучение плаванию взрослых и детей, индивидуальные и групповые занятия.</p></div></div><div class="col-md-4"><div class="feature-card"><span><i class="bi bi-flower1"></i></span><h4>SPA-восстановление</h4><p>Массаж, прессотерапия, душ Шарко, сауна и соляная комната.</p></div></div></div></div></section>
 
+@include('partials.home-panoramas')
+
 <section class="section-padding services-section" id="services">
     <div class="container">
         <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-5">
