@@ -53,7 +53,7 @@ class TrainerController extends Controller
         $data['is_active'] = $request->boolean('is_active');
         $trainer->update($data);
 
-        $this->storePhotos($request, $trainer);
+        $this->savePhotos($request, $trainer);
 
         return back()->with('success', 'Данные тренера обновлены.');
     }
@@ -167,7 +167,7 @@ class TrainerController extends Controller
 
         while (Trainer::query()
             ->where('slug', $slug)
-            ->when($ignore, fn ($query) => $query->whereKeyNot($ignore->id))
+            ->when($ignore, fn ($query) => $query->where('id', '!=', $ignore->id))
             ->exists()) {
             $slug = $base.'-'.$suffix++;
         }
