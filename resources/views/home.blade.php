@@ -68,7 +68,7 @@
         <div class="row g-4">
             @foreach($trainers as $trainer)
                 <div class="col-md-6 col-xl-4">
-                    <article class="trainer-card d-flex flex-column">
+                    <article class="trainer-card h-100 d-flex flex-column">
                         <a href="{{ route('trainers.show', ['trainer' => $trainer->slug]) }}" class="text-decoration-none text-reset">
                             @if($trainer->photo_path)
                                 <img src="{{ Storage::url($trainer->photo_path) }}" alt="{{ $trainer->name }}">
