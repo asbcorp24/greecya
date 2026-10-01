@@ -40,7 +40,7 @@
                 @if($trainer->experience_years)
                     <div class="trainer-profile-experience">
                         <i class="bi bi-award"></i>
-                        <span>Стаж {{ $trainer->experience_years }} {{ trans_choice('год|года|лет', $trainer->experience_years) }}</span>
+                        <span>Стаж {{ $trainer->experience_years }} лет</span>
                     </div>
                 @endif
 
