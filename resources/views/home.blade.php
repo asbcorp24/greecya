@@ -69,9 +69,9 @@
             @foreach($trainers as $trainer)
                 <div class="col-md-6 col-xl-4">
                     <article class="trainer-card h-100 d-flex flex-column">
-                        <a href="{{ route('trainers.show', ['trainer' => $trainer->slug]) }}" class="text-decoration-none text-reset">
+                        <a href="{{ route('trainers.show', ['trainer' => $trainer->slug]) }}" class="trainer-card-photo text-decoration-none text-reset">
                             @if($trainer->photo_path)
-                                <img src="{{ Storage::url($trainer->photo_path) }}" alt="{{ $trainer->name }}">
+                                <img src="{{ Storage::url($trainer->photo_path) }}" alt="{{ $trainer->name }}" loading="lazy">
                             @else
                                 <div class="trainer-placeholder"><i class="bi bi-person"></i></div>
                             @endif
