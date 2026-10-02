@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\GalleryAlbum;
 use App\Models\NewsPost;
 use App\Models\Service;
+use App\Models\Trainer;
 use App\Support\SiteSettings;
 
 class SeoController extends Controller
@@ -29,6 +30,13 @@ class SeoController extends Controller
             'changefreq' => 'weekly',
         ]);
 
+        $trainers = Trainer::query()->where('is_active', true)->whereNotNull('slug')->get()->map(fn ($trainer) => [
+            'loc' => route('trainers.show', ['trainer' => $trainer->slug]),
+            'lastmod' => $trainer->updated_at?->toAtomString(),
+            'priority' => '0.7',
+            'changefreq' => 'monthly',
+        ]);
+
         $news = NewsPost::query()->where('is_published', true)->get()->map(fn ($post) => [
             'loc' => route('news.show', $post),
             'lastmod' => $post->updated_at?->toAtomString(),
@@ -43,7 +51,7 @@ class SeoController extends Controller
             'changefreq' => 'monthly',
         ]);
 
-        return response()->view('seo.sitemap', ['urls' => $staticUrls->concat($services)->concat($news)->concat($albums)])
+        return response()->view('seo.sitemap', ['urls' => $staticUrls->concat($services)->concat($trainers)->concat($news)->concat($albums)])
             ->header('Content-Type', 'application/xml; charset=UTF-8');
     }
 

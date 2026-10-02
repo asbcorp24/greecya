@@ -44,6 +44,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ReceptionController;
+use App\Http\Controllers\TrainerProfileController;
 use App\Http\Controllers\SeoController;
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +55,7 @@ Route::get('/news',[NewsController::class,'index'])->name('news.index');
 Route::get('/news/{post}',[NewsController::class,'show'])->name('news.show');
 Route::get('/gallery',[GalleryController::class,'index'])->name('gallery.index');
 Route::get('/gallery/{album}',[GalleryController::class,'show'])->name('gallery.show');
+Route::get('/trainers/{trainer:slug}',[TrainerProfileController::class,'show'])->name('trainers.show');
 Route::get('/certificates/{certificate}',[CertificateController::class,'show'])->name('certificate.verify');
 Route::get('/certificates/{certificate}/print',[CertificateController::class,'print'])->name('certificate.print');
 Route::get('/booking',[BookingController::class,'index'])->name('booking.index');
@@ -125,7 +127,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth','admin','audit.admin'
 
     Route::get('/orders',[AdminOrderController::class,'index'])->name('orders.index');Route::patch('/orders/{order}',[AdminOrderController::class,'update'])->name('orders.update');
     Route::get('/schedule',[AdminScheduleController::class,'index'])->name('schedule.index');Route::post('/schedule',[AdminScheduleController::class,'store'])->name('schedule.store');Route::patch('/schedule/services/{service}/unrestricted',[AdminScheduleController::class,'updateUnrestricted'])->name('schedule.unrestricted');Route::delete('/schedule/{slot}',[AdminScheduleController::class,'destroy'])->name('schedule.destroy');
-    Route::get('/trainers',[AdminTrainerController::class,'index'])->name('trainers.index');Route::post('/trainers',[AdminTrainerController::class,'store'])->name('trainers.store');Route::patch('/trainers/{trainer}',[AdminTrainerController::class,'update'])->name('trainers.update');Route::delete('/trainers/{trainer}',[AdminTrainerController::class,'destroy'])->name('trainers.destroy');
+    Route::get('/trainers',[AdminTrainerController::class,'index'])->name('trainers.index');Route::post('/trainers',[AdminTrainerController::class,'store'])->name('trainers.store');Route::patch('/trainers/{trainer}',[AdminTrainerController::class,'update'])->name('trainers.update');Route::post('/trainers/{trainer}/photos',[AdminTrainerController::class,'uploadPhotos'])->name('trainers.photos.store');Route::patch('/trainers/{trainer}/photos/{photo}',[AdminTrainerController::class,'updatePhoto'])->name('trainers.photos.update');Route::delete('/trainers/{trainer}/photos/{photo}',[AdminTrainerController::class,'destroyPhoto'])->name('trainers.photos.destroy');Route::delete('/trainers/{trainer}',[AdminTrainerController::class,'destroy'])->name('trainers.destroy');
     Route::get('/products',[AdminProductController::class,'index'])->name('products.index');Route::post('/products',[AdminProductController::class,'store'])->name('products.store');Route::patch('/products/{product}',[AdminProductController::class,'update'])->name('products.update');
     Route::get('/leads',[AdminLeadController::class,'index'])->name('leads.index');Route::patch('/leads/{lead}',[AdminLeadController::class,'update'])->name('leads.update');
     Route::get('/news',[AdminNewsController::class,'index'])->name('news.index');Route::post('/news',[AdminNewsController::class,'store'])->name('news.store');Route::patch('/news/{post}',[AdminNewsController::class,'update'])->name('news.update');Route::delete('/news/{post}',[AdminNewsController::class,'destroy'])->name('news.destroy');
