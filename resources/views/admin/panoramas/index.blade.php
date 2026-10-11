@@ -4,7 +4,9 @@
 @section('eyebrow', 'Контент сайта')
 
 @section('content')
-@php($compressionResult = session('panorama_compression_result'))
+@php
+    $compressionResult = session('panorama_compression_result');
+@endphp
 <div class="row g-4">
     <div class="col-xl-4">
         <div class="admin-card p-4 sticky-xl-top" style="top:1rem">
@@ -67,7 +69,9 @@
 
         <div class="row g-4">
             @forelse($panoramas as $panorama)
-                @php($stats = $panoramaStats[$panorama->id] ?? ['exists' => false, 'format' => '—', 'size' => '—', 'dimensions' => '—'])
+                @php
+                    $stats = $panoramaStats[$panorama->id] ?? ['exists' => false, 'format' => '—', 'size' => '—', 'dimensions' => '—'];
+                @endphp
                 <div class="col-lg-6">
                     <article class="admin-card overflow-hidden h-100">
                         <div class="position-relative">
