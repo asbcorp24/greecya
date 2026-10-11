@@ -144,7 +144,12 @@ class PanoramaManagementTest extends TestCase
         $this->actingAs($manager)
             ->post(route('admin.panoramas.compress', $panorama))
             ->assertRedirect()
-            ->assertSessionHas('success');
+            ->assertSessionHas('success')
+            ->assertSessionHas('panorama_compression_result', function (array $result) use ($panorama) {
+                return $result['panorama_id'] === $panorama->id
+                    && $result['before_dimensions'] === '2400×1200'
+                    && $result['after_dimensions'] === '2400×1200';
+            });
 
         $panorama->refresh();
 
