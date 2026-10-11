@@ -45,6 +45,8 @@ class ImageOptimizationService
         ['table' => 'trainer_photos', 'column' => 'image_path'],
         ['table' => 'customers', 'column' => 'photo_path'],
         ['table' => 'safety_incidents', 'column' => 'photo_path'],
+        ['table' => 'medical_clearances', 'column' => 'document_path'],
+        ['table' => 'family_consents', 'column' => 'document_path'],
         ['table' => 'site_settings', 'column' => 'value'],
     ];
 
@@ -318,9 +320,7 @@ class ImageOptimizationService
                     throw $e;
                 }
 
-                if (! $disk->delete($path) && $disk->exists($path)) {
-                    throw new \RuntimeException('WebP создан и база обновлена, но старый файл не удалось удалить.');
-                }
+                $disk->delete($path);
             }
 
             return [
