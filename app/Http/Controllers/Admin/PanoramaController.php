@@ -18,12 +18,21 @@ class PanoramaController extends Controller
 
     public function index()
     {
+        $panoramas = Panorama::query()
+            ->orderByDesc('is_homepage')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $panoramaStats = $panoramas
+            ->mapWithKeys(fn (Panorama $panorama) => [
+                $panorama->id => $this->getPanoramaStats($panorama->image_path),
+            ])
+            ->all();
+
         return view('admin.panoramas.index', [
-            'panoramas' => Panorama::query()
-                ->orderByDesc('is_homepage')
-                ->orderBy('sort_order')
-                ->orderBy('id')
-                ->get(),
+            'panoramas' => $panoramas,
+            'panoramaStats' => $panoramaStats,
         ]);
     }
 
@@ -121,6 +130,7 @@ class PanoramaController extends Controller
         }
 
         $beforeSize = (int) $disk->size($oldImagePath);
+        $beforeDimensions = $this->getImageDimensions($oldImagePath);
         $sourceTemporaryPath = tempnam(sys_get_temp_dir(), 'greecya-panorama-source-');
 
         if ($sourceTemporaryPath === false) {
@@ -164,6 +174,7 @@ class PanoramaController extends Controller
 
             $newImagePath = $this->storeOptimizedJpeg($sourceFile);
             $afterSize = (int) $disk->size($newImagePath);
+            $afterDimensions = $this->getImageDimensions($newImagePath);
 
             try {
                 $panorama->update(['image_path' => $newImagePath]);
@@ -176,10 +187,23 @@ class PanoramaController extends Controller
                 $disk->delete($oldImagePath);
             }
 
-            return back()->with(
-                'success',
-                'Панорама сжата: '.$this->formatBytes($beforeSize).' → '.$this->formatBytes($afterSize).'. Файл сохранён в JPEG, запись в базе обновлена.'
-            );
+            $savedPercent = $beforeSize > 0
+                ? max(0, (int) round((1 - ($afterSize / $beforeSize)) * 100))
+                : 0;
+
+            return back()
+                ->with(
+                    'success',
+                    'Готово. Панорама сжата и запись в базе обновлена.'
+                )
+                ->with('panorama_compression_result', [
+                    'panorama_id' => $panorama->id,
+                    'before_size' => $this->formatBytes($beforeSize),
+                    'after_size' => $this->formatBytes($afterSize),
+                    'before_dimensions' => $beforeDimensions,
+                    'after_dimensions' => $afterDimensions,
+                    'saved_percent' => $savedPercent,
+                ]);
         } finally {
             if (is_resource($readStream)) {
                 fclose($readStream);
@@ -241,6 +265,48 @@ class PanoramaController extends Controller
         }
 
         return $path;
+    }
+
+    private function getPanoramaStats(?string $path): array
+    {
+        $disk = Storage::disk('public');
+
+        if (! $path || ! $disk->exists($path)) {
+            return [
+                'exists' => false,
+                'format' => '—',
+                'size' => 'Файл не найден',
+                'dimensions' => '—',
+            ];
+        }
+
+        return [
+            'exists' => true,
+            'format' => strtoupper(pathinfo($path, PATHINFO_EXTENSION) ?: '—'),
+            'size' => $this->formatBytes((int) $disk->size($path)),
+            'dimensions' => $this->getImageDimensions($path),
+        ];
+    }
+
+    private function getImageDimensions(string $path): string
+    {
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($path)) {
+            return '—';
+        }
+
+        try {
+            $info = @getimagesize($disk->path($path));
+        } catch (\Throwable $e) {
+            $info = false;
+        }
+
+        if (! is_array($info) || empty($info[0]) || empty($info[1])) {
+            return '—';
+        }
+
+        return $info[0].'×'.$info[1];
     }
 
     private function formatBytes(int $bytes): string
