@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\GalleryAlbum;
+use App\Models\HeroSlide;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,6 +21,7 @@ class ImageOptimizationSettingsTest extends TestCase
         parent::setUp();
         $this->seed(DatabaseSeeder::class);
         Cache::forget('sitewide-image-optimization-state-v1');
+        Cache::forget('sitewide-image-optimization-state-v2');
     }
 
     public function test_manager_can_open_sitewide_image_optimization_page(): void
@@ -35,23 +38,31 @@ class ImageOptimizationSettingsTest extends TestCase
             ->assertOk()
             ->assertSee('Сжатие изображений')
             ->assertSee('Фотогалерея')
-            ->assertSee('Сжать все изображения');
+            ->assertSee('Конвертировать и сжать всё');
     }
 
-    public function test_batch_optimizer_keeps_path_and_resizes_large_site_image(): void
+    public function test_batch_optimizer_converts_to_webp_updates_database_and_resizes(): void
     {
+        $this->requireWebpSupport();
         Storage::fake('public');
 
         $image = UploadedFile::fake()->image('large.jpg', 3200, 1600);
-        $path = 'gallery/large.jpg';
-        Storage::disk('public')->put($path, file_get_contents($image->getRealPath()));
+        $oldPath = 'slides/large.jpg';
+        Storage::disk('public')->put($oldPath, file_get_contents($image->getRealPath()));
+
+        $slide = HeroSlide::query()->create([
+            'title' => 'Большой слайд',
+            'image_path' => $oldPath,
+            'sort_order' => 10,
+            'is_active' => true,
+        ]);
 
         $manager = User::where('email', 'manager@greecya.local')->firstOrFail();
 
         $response = $this->actingAs($manager)
             ->postJson(route('admin.settings.images.compress'), [
                 'offset' => 0,
-                'section' => 'gallery',
+                'section' => 'slides',
                 'force' => true,
             ]);
 
@@ -61,17 +72,64 @@ class ImageOptimizationSettingsTest extends TestCase
                 'total' => 1,
                 'done' => true,
                 'processed' => 1,
+                'converted' => 1,
                 'failed' => 0,
+                'database_updates' => 1,
             ]);
 
-        Storage::disk('public')->assertExists($path);
+        $slide->refresh();
+        $newPath = $slide->image_path;
 
-        $info = getimagesize(Storage::disk('public')->path($path));
+        $this->assertNotSame($oldPath, $newPath);
+        $this->assertStringEndsWith('.webp', $newPath);
+        Storage::disk('public')->assertMissing($oldPath);
+        Storage::disk('public')->assertExists($newPath);
+
+        $info = getimagesize(Storage::disk('public')->path($newPath));
 
         $this->assertIsArray($info);
-        $this->assertSame('image/jpeg', $info['mime']);
+        $this->assertSame('image/webp', $info['mime']);
         $this->assertSame(2560, $info[0]);
         $this->assertSame(1280, $info[1]);
+    }
+
+    public function test_gallery_cover_path_is_updated_after_webp_conversion(): void
+    {
+        $this->requireWebpSupport();
+        Storage::fake('public');
+
+        $image = UploadedFile::fake()->image('cover.png', 1400, 900);
+        $oldPath = 'gallery/covers/cover.png';
+        Storage::disk('public')->put($oldPath, file_get_contents($image->getRealPath()));
+
+        $album = GalleryAlbum::query()->create([
+            'title' => 'Тестовый альбом',
+            'slug' => 'test-album',
+            'cover_path' => $oldPath,
+            'is_published' => true,
+            'sort_order' => 10,
+        ]);
+
+        $manager = User::where('email', 'manager@greecya.local')->firstOrFail();
+
+        $this->actingAs($manager)
+            ->postJson(route('admin.settings.images.compress'), [
+                'offset' => 0,
+                'section' => 'gallery.covers',
+                'force' => true,
+            ])
+            ->assertOk()
+            ->assertJson([
+                'converted' => 1,
+                'failed' => 0,
+                'database_updates' => 1,
+            ]);
+
+        $album->refresh();
+
+        $this->assertStringEndsWith('.webp', $album->cover_path);
+        Storage::disk('public')->assertMissing($oldPath);
+        Storage::disk('public')->assertExists($album->cover_path);
     }
 
     public function test_gallery_covers_and_gallery_photos_are_separate_sections(): void
@@ -101,6 +159,7 @@ class ImageOptimizationSettingsTest extends TestCase
 
     public function test_optimizer_skips_unchanged_file_after_first_successful_run(): void
     {
+        $this->requireWebpSupport();
         Storage::fake('public');
 
         $image = UploadedFile::fake()->image('repeat.jpg', 1400, 900);
@@ -128,5 +187,11 @@ class ImageOptimizationSettingsTest extends TestCase
                 'skipped' => 1,
                 'failed' => 0,
             ]);
+    }
+    private function requireWebpSupport(): void
+    {
+        if (! class_exists(\Imagick::class) && ! function_exists('imagewebp')) {
+            $this->markTestSkipped('Imagick или GD WebP недоступны.');
+        }
     }
 }
