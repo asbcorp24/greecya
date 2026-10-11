@@ -108,7 +108,7 @@
                 <div class="d-flex justify-content-between gap-3">
                     <div>
                         <h4 class="mb-1">{{ $section['label'] }}</h4>
-                        <div class="text-muted small text-break">storage/app/public/{{ $section['key'] }}/</div>
+                        <div class="text-muted small text-break">storage/app/public/{{ $section['path'] }}/</div>
                     </div>
                     <span class="badge rounded-pill text-bg-light border align-self-start">{{ $section['count'] }} шт.</span>
                 </div>
