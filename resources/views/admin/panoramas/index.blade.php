@@ -28,7 +28,7 @@
                 <div class="col-12">
                     <label class="form-label">360° фото</label>
                     <input type="file" class="form-control" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
-                    <small class="text-muted">JPG, PNG или WebP, до 30 МБ.</small>
+                    <small class="text-muted">JPG, PNG или WebP, до 30 МБ. После загрузки файл автоматически преобразуется в JPEG (качество 82%) и при необходимости уменьшается до 8192 px по ширине.</small>
                 </div>
                 <div class="col-5">
                     <label class="form-label">Сортировка</label>
@@ -95,6 +95,7 @@
                             <div class="col-12">
                                 <label class="form-label small">Заменить 360° фото</label>
                                 <input type="file" class="form-control" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                                <small class="text-muted">Новый файл также будет автоматически оптимизирован в JPEG.</small>
                             </div>
                             <div class="col-4">
                                 <label class="form-label small">Порядок</label>

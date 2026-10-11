@@ -30,7 +30,7 @@ class PanoramaManagementTest extends TestCase
             ->post(route('admin.panoramas.store'), [
                 'title' => 'Бассейн 360',
                 'description' => 'Панорама чаши бассейна.',
-                'image' => UploadedFile::fake()->image('pool-360.jpg', 2000, 1000),
+                'image' => UploadedFile::fake()->image('pool-360.png', 2000, 1000),
                 'sort_order' => 10,
                 'is_active' => '1',
                 'is_homepage' => '1',
@@ -43,6 +43,13 @@ class PanoramaManagementTest extends TestCase
         $this->assertTrue($panorama->is_active);
         $this->assertTrue($panorama->is_homepage);
         Storage::disk('public')->assertExists($panorama->image_path);
+        $this->assertStringEndsWith('.jpg', $panorama->image_path);
+
+        $storedImage = getimagesize(Storage::disk('public')->path($panorama->image_path));
+        $this->assertIsArray($storedImage);
+        $this->assertSame('image/jpeg', $storedImage['mime']);
+        $this->assertSame(2000, $storedImage[0]);
+        $this->assertSame(1000, $storedImage[1]);
 
         $this->get(route('home'))
             ->assertOk()
