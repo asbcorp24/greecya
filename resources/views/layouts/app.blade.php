@@ -22,7 +22,7 @@
         $servicesCssVersion = file_exists(public_path('css/services.css')) ? filemtime(public_path('css/services.css')) : 1;
     @endphp
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $pageTitle }}</title>
     <meta name="description" content="{{ $pageDescription }}">
@@ -58,7 +58,7 @@
     <link href="{{ asset('css/services.css') }}?v={{ $servicesCssVersion }}" rel="stylesheet">
     @stack('styles')
 </head>
-<body>
+<body class="{{ request()->routeIs('admin.*', 'reception.*', 'coach.*') ? '' : 'has-mobile-app-nav' }}">
 @if($site['promo_enabled'] ?? false)
 <div class="promo-bar"><div class="container d-flex justify-content-center gap-2 text-center"><i class="bi bi-gift"></i><span>{{ $site['promo_text'] }}</span></div></div>
 @endif
@@ -97,6 +97,92 @@
         </div>
     </div>
 </nav>
+
+@unless(request()->routeIs('admin.*', 'reception.*', 'coach.*'))
+<nav class="mobile-app-nav d-xl-none" aria-label="Основная навигация">
+    <a class="mobile-app-nav__item {{ request()->routeIs('home') ? 'is-active' : '' }}" href="{{ route('home') }}" @if(request()->routeIs('home')) aria-current="page" @endif>
+        <i class="bi bi-house-door"></i>
+        <span>Главная</span>
+    </a>
+    <a class="mobile-app-nav__item {{ request()->routeIs('services.*') ? 'is-active' : '' }}" href="{{ route('services.index') }}" @if(request()->routeIs('services.*')) aria-current="page" @endif>
+        <i class="bi bi-grid"></i>
+        <span>Услуги</span>
+    </a>
+    <a class="mobile-app-nav__item mobile-app-nav__item--primary {{ request()->routeIs('booking.*') ? 'is-active' : '' }}" href="{{ route('booking.index') }}" @if(request()->routeIs('booking.*')) aria-current="page" @endif>
+        <span class="mobile-app-nav__primary-icon"><i class="bi bi-calendar2-check"></i></span>
+        <span>Запись</span>
+    </a>
+    <a class="mobile-app-nav__item {{ request()->routeIs('catalog.*', 'certificate.*') ? 'is-active' : '' }}" href="{{ route('catalog.index') }}" @if(request()->routeIs('catalog.*', 'certificate.*')) aria-current="page" @endif>
+        <i class="bi bi-ticket-perforated"></i>
+        <span>Билеты</span>
+    </a>
+    <button class="mobile-app-nav__item mobile-app-nav__more {{ request()->routeIs('news.*', 'gallery.*', 'trainers.*', 'help.*', 'account.*', 'login') ? 'is-active' : '' }}" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMoreMenu" aria-controls="mobileMoreMenu" aria-label="Открыть дополнительное меню">
+        <i class="bi bi-three-dots"></i>
+        <span>Ещё</span>
+    </button>
+</nav>
+
+<div class="offcanvas offcanvas-bottom mobile-more-sheet d-xl-none" tabindex="-1" id="mobileMoreMenu" aria-labelledby="mobileMoreMenuLabel">
+    <div class="offcanvas-header">
+        <div>
+            <div class="mobile-more-sheet__eyebrow">Навигация</div>
+            <h5 class="offcanvas-title" id="mobileMoreMenuLabel">Ещё</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Закрыть"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="mobile-more-grid">
+            <a class="mobile-more-link {{ request()->routeIs('news.*') ? 'is-active' : '' }}" href="{{ route('news.index') }}">
+                <i class="bi bi-newspaper"></i>
+                <span><strong>Новости</strong><small>События и объявления</small></span>
+            </a>
+            <a class="mobile-more-link {{ request()->routeIs('gallery.*') ? 'is-active' : '' }}" href="{{ route('gallery.index') }}">
+                <i class="bi bi-images"></i>
+                <span><strong>Фотогалерея</strong><small>Фото комплекса</small></span>
+            </a>
+            @auth
+                <a class="mobile-more-link {{ request()->routeIs('account.*') ? 'is-active' : '' }}" href="{{ auth()->user()->role === 'customer' ? route('account.dashboard') : (auth()->user()->role === 'director' ? route('admin.director.dashboard') : route('admin.dashboard')) }}">
+                    <i class="bi bi-person-circle"></i>
+                    <span><strong>Кабинет</strong><small>Профиль и услуги</small></span>
+                </a>
+                <a class="mobile-more-link {{ request()->routeIs('help.*') ? 'is-active' : '' }}" href="{{ route('help.index') }}">
+                    <i class="bi bi-question-circle"></i>
+                    <span><strong>Справка</strong><small>Помощь по сайту</small></span>
+                </a>
+            @else
+                <a class="mobile-more-link {{ request()->routeIs('login') ? 'is-active' : '' }}" href="{{ route('login') }}">
+                    <i class="bi bi-person-circle"></i>
+                    <span><strong>Войти</strong><small>Личный кабинет</small></span>
+                </a>
+                <a class="mobile-more-link {{ request()->routeIs('account.register') ? 'is-active' : '' }}" href="{{ route('account.register') }}">
+                    <i class="bi bi-person-plus"></i>
+                    <span><strong>Регистрация</strong><small>Создать профиль</small></span>
+                </a>
+            @endauth
+            <a class="mobile-more-link" href="tel:{{ $phoneHref }}">
+                <i class="bi bi-telephone"></i>
+                <span><strong>Позвонить</strong><small>{{ $site['phone'] }}</small></span>
+            </a>
+            <a class="mobile-more-link" href="{{ route('home') }}#contacts">
+                <i class="bi bi-geo-alt"></i>
+                <span><strong>Контакты</strong><small>Адрес и часы работы</small></span>
+            </a>
+        </div>
+
+        @auth
+            @if(auth()->user()->role === 'customer')
+                <form method="post" action="{{ route('logout') }}" class="mobile-more-logout">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-secondary w-100 rounded-pill">
+                        <i class="bi bi-box-arrow-right me-2"></i>Выйти из кабинета
+                    </button>
+                </form>
+            @endif
+        @endauth
+    </div>
+</div>
+@endunless
+
 @if ($errors->any())<div class="container mt-3"><div class="alert alert-danger rounded-4 border-0 shadow-sm"><strong>Проверьте заполнение формы:</strong><ul class="mb-0 mt-2">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div></div>@endif
 @if (session('success'))<div class="container mt-3"><div class="alert alert-success rounded-4 border-0 shadow-sm">{{ session('success') }}</div></div>@endif
 <main>@yield('content')</main>
