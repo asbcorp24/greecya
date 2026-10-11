@@ -109,6 +109,90 @@ class PanoramaController extends Controller
         return back()->with('success', '360° панорама обновлена и оптимизирована в JPEG.');
     }
 
+    public function compress(Panorama $panorama)
+    {
+        $disk = Storage::disk('public');
+        $oldImagePath = $panorama->image_path;
+
+        if (! $oldImagePath || ! $disk->exists($oldImagePath)) {
+            throw ValidationException::withMessages([
+                'image' => 'Исходный файл панорамы не найден на сервере.',
+            ]);
+        }
+
+        $beforeSize = (int) $disk->size($oldImagePath);
+        $sourceTemporaryPath = tempnam(sys_get_temp_dir(), 'greecya-panorama-source-');
+
+        if ($sourceTemporaryPath === false) {
+            throw ValidationException::withMessages([
+                'image' => 'Не удалось подготовить временный файл для сжатия панорамы.',
+            ]);
+        }
+
+        $readStream = null;
+        $writeStream = null;
+        $newImagePath = null;
+
+        try {
+            $readStream = $disk->readStream($oldImagePath);
+            $writeStream = fopen($sourceTemporaryPath, 'wb');
+
+            if (! is_resource($readStream) || $writeStream === false) {
+                throw ValidationException::withMessages([
+                    'image' => 'Не удалось прочитать исходный файл панорамы.',
+                ]);
+            }
+
+            stream_copy_to_stream($readStream, $writeStream);
+
+            fclose($readStream);
+            $readStream = null;
+            fclose($writeStream);
+            $writeStream = null;
+
+            $detectedMime = function_exists('mime_content_type')
+                ? (mime_content_type($sourceTemporaryPath) ?: null)
+                : null;
+
+            $sourceFile = new UploadedFile(
+                $sourceTemporaryPath,
+                basename($oldImagePath),
+                $detectedMime,
+                null,
+                true
+            );
+
+            $newImagePath = $this->storeOptimizedJpeg($sourceFile);
+            $afterSize = (int) $disk->size($newImagePath);
+
+            try {
+                $panorama->update(['image_path' => $newImagePath]);
+            } catch (\Throwable $e) {
+                $disk->delete($newImagePath);
+                throw $e;
+            }
+
+            if ($oldImagePath !== $newImagePath) {
+                $disk->delete($oldImagePath);
+            }
+
+            return back()->with(
+                'success',
+                'Панорама сжата: '.$this->formatBytes($beforeSize).' → '.$this->formatBytes($afterSize).'. Файл сохранён в JPEG, запись в базе обновлена.'
+            );
+        } finally {
+            if (is_resource($readStream)) {
+                fclose($readStream);
+            }
+
+            if (is_resource($writeStream)) {
+                fclose($writeStream);
+            }
+
+            @unlink($sourceTemporaryPath);
+        }
+    }
+
     public function destroy(Panorama $panorama)
     {
         $path = $panorama->image_path;
@@ -157,6 +241,19 @@ class PanoramaController extends Controller
         }
 
         return $path;
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes < 1024) {
+            return $bytes.' Б';
+        }
+
+        if ($bytes < 1024 * 1024) {
+            return number_format($bytes / 1024, 1, ',', ' ').' КБ';
+        }
+
+        return number_format($bytes / (1024 * 1024), 1, ',', ' ').' МБ';
     }
 
     private function optimizeWithImagick(UploadedFile $file, string $targetPath): void
