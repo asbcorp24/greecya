@@ -155,6 +155,7 @@
             @if($u->hasPermission('settings.manage'))
                 <a class="{{ request()->routeIs('admin.settings.general*') ? 'active' : '' }}" href="{{ route('admin.settings.general') }}"><i class="bi bi-sliders"></i>Настройки сайта</a>
                 <a class="{{ request()->routeIs('admin.settings.contacts*') ? 'active' : '' }}" href="{{ route('admin.settings.contacts') }}"><i class="bi bi-telephone"></i>Контакты и реквизиты</a>
+                <a class="{{ request()->routeIs('admin.settings.images*') ? 'active' : '' }}" href="{{ route('admin.settings.images') }}"><i class="bi bi-file-earmark-zip"></i>Сжатие изображений</a>
             @endif
             @if($u->hasPermission('seo.manage'))
                 <a class="{{ request()->routeIs('admin.seo.*') ? 'active' : '' }}" href="{{ route('admin.seo.index') }}"><i class="bi bi-search"></i>SEO</a>
