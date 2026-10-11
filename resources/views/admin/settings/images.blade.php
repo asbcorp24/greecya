@@ -11,6 +11,7 @@
             <div class="text-muted small mb-1">Всего изображений</div>
             <div class="display-6 fw-bold">{{ $stats['count'] }}</div>
             <div class="text-muted mt-2">JPG, JPEG, PNG и WebP в публичном хранилище.</div>
+            <div class="small mt-2"><strong>{{ $stats['webp'] }}</strong> уже в WebP.</div>
         </div>
     </div>
     <div class="col-md-4">
@@ -32,20 +33,21 @@
 <div class="admin-card p-4 mb-4">
     <div class="row g-4 align-items-center">
         <div class="col-xl-8">
-            <h3 class="mb-2"><i class="bi bi-images me-2 text-primary"></i>Оптимизировать изображения всего сайта</h3>
+            <h3 class="mb-2"><i class="bi bi-images me-2 text-primary"></i>Конвертировать и сжать изображения всего сайта</h3>
             <p class="text-muted mb-3">
-                Пути и имена файлов сохраняются, поэтому ссылки в базе данных не ломаются.
-                JPEG и WebP пережимаются с качеством 82%, PNG оптимизируется с сохранением прозрачности.
+                JPG, JPEG и PNG автоматически конвертируются в WebP с качеством 82%.
+                После конвертации пути к файлам автоматически обновляются в базе данных, и только затем удаляются старые файлы.
+                Прозрачность PNG сохраняется. Уже существующие WebP дополнительно оптимизируются.
                 Обычные изображения шире 2560 px уменьшаются, для 360° панорам предел — 8192 px.
             </p>
             <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="forceOptimization">
                 <label class="form-check-label" for="forceOptimization">
-                    Пережимать заново даже уже оптимизированные файлы
+                    Повторно оптимизировать даже уже обработанные WebP
                 </label>
             </div>
             <div class="small text-muted mt-1">
-                Обычно эту галочку включать не нужно: повторное JPEG-сжатие может постепенно ухудшать качество.
+                Обычно эту галочку включать не нужно: повторное сжатие WebP может постепенно ухудшать качество.
             </div>
         </div>
         <div class="col-xl-4">
@@ -57,7 +59,7 @@
                 data-label="весь сайт"
                 @disabled($stats['count'] === 0)
             >
-                <i class="bi bi-file-earmark-zip me-2"></i>Сжать все изображения
+                <i class="bi bi-arrow-repeat me-2"></i>Конвертировать и сжать всё
             </button>
             <button type="button" class="btn btn-outline-secondary w-100 mt-2" onclick="location.reload()">
                 <i class="bi bi-arrow-clockwise me-1"></i>Обновить статистику
@@ -87,8 +89,8 @@
     </div>
     <div class="row g-3 mt-2">
         <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><small class="text-muted d-block">Проверено</small><strong id="progressProcessed">0</strong></div></div>
-        <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><small class="text-muted d-block">Сжато</small><strong id="progressOptimized">0</strong></div></div>
-        <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><small class="text-muted d-block">Пропущено</small><strong id="progressSkipped">0</strong></div></div>
+        <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><small class="text-muted d-block">Конвертировано</small><strong id="progressConverted">0</strong></div></div>
+        <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><small class="text-muted d-block">Обновлено в БД</small><strong id="progressDatabase">0</strong></div></div>
         <div class="col-6 col-lg-3"><div class="border rounded-3 p-3"><small class="text-muted d-block">Экономия</small><strong id="progressSaved">0 Б</strong></div></div>
     </div>
     <div id="optimizationErrors" class="alert alert-warning mt-3 mb-0 d-none"></div>
@@ -119,8 +121,8 @@
                         <strong>{{ $section['size_formatted'] }}</strong>
                     </div>
                     <div>
-                        <small class="text-muted d-block">Обработано</small>
-                        <strong>{{ $section['optimized'] }} / {{ $section['count'] }}</strong>
+                        <small class="text-muted d-block">WebP</small>
+                        <strong>{{ $section['webp'] }} / {{ $section['count'] }}</strong>
                     </div>
                 </div>
 
@@ -131,7 +133,7 @@
                     data-total="{{ $section['count'] }}"
                     data-label="{{ $section['label'] }}"
                 >
-                    <i class="bi bi-file-earmark-zip me-1"></i>Сжать этот раздел
+                    <i class="bi bi-arrow-repeat me-1"></i>Конвертировать этот раздел
                 </button>
             </div>
         </div>
@@ -157,8 +159,8 @@
     const percent = document.getElementById('optimizationPercent');
     const status = document.getElementById('optimizationStatus');
     const processedEl = document.getElementById('progressProcessed');
-    const optimizedEl = document.getElementById('progressOptimized');
-    const skippedEl = document.getElementById('progressSkipped');
+    const convertedEl = document.getElementById('progressConverted');
+    const databaseEl = document.getElementById('progressDatabase');
     const savedEl = document.getElementById('progressSaved');
     const errorsEl = document.getElementById('optimizationErrors');
     const forceEl = document.getElementById('forceOptimization');
@@ -178,7 +180,7 @@
     const run = async (section, expectedTotal, label) => {
         if (! expectedTotal) return;
 
-        if (! confirm('Запустить сжатие изображений: ' + label + '? Файлы будут заменяться оптимизированными версиями с сохранением путей.')) {
+        if (! confirm('Конвертировать изображения в WebP: ' + label + '? Пути в базе данных будут автоматически обновлены, старые JPG/PNG будут удалены после успешного обновления БД.')) {
             return;
         }
 
@@ -191,6 +193,8 @@
         let total = expectedTotal;
         let checked = 0;
         let optimized = 0;
+        let converted = 0;
+        let databaseUpdates = 0;
         let skipped = 0;
         let failed = 0;
         let saved = 0;
@@ -201,8 +205,8 @@
             bar.setAttribute('aria-valuenow', String(value));
             percent.textContent = value + '%';
             processedEl.textContent = checked + ' / ' + total;
-            optimizedEl.textContent = optimized;
-            skippedEl.textContent = skipped;
+            convertedEl.textContent = converted;
+            databaseEl.textContent = databaseUpdates;
             savedEl.textContent = formatBytes(saved);
             status.textContent = value >= 100
                 ? 'Обработка завершена.'
@@ -237,6 +241,8 @@
                 offset = data.next_offset;
                 checked = offset;
                 optimized += data.optimized || 0;
+                converted += data.converted || 0;
+                databaseUpdates += data.database_updates || 0;
                 skipped += data.skipped || 0;
                 failed += data.failed || 0;
                 saved += data.saved_bytes || 0;
@@ -247,7 +253,7 @@
             }
 
             bar.classList.remove('progress-bar-animated');
-            status.textContent = 'Готово: ' + label + '. Обновите статистику, чтобы увидеть новый общий размер.';
+            status.textContent = 'Готово: ' + label + '. Конвертировано в WebP: ' + converted + ', обновлено ссылок в БД: ' + databaseUpdates + '.';
 
             if (failed > 0) {
                 errorsEl.classList.remove('d-none');
