@@ -150,10 +150,14 @@ class PanoramaController extends Controller
             fclose($writeStream);
             $writeStream = null;
 
+            $detectedMime = function_exists('mime_content_type')
+                ? (mime_content_type($sourceTemporaryPath) ?: null)
+                : null;
+
             $sourceFile = new UploadedFile(
                 $sourceTemporaryPath,
                 basename($oldImagePath),
-                mime_content_type($sourceTemporaryPath) ?: null,
+                $detectedMime,
                 null,
                 true
             );
