@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SiteSetting;
 use App\Support\SiteSettings;
+use App\Services\ImageOptimizationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -22,6 +23,31 @@ class SettingsController extends Controller
         return view('admin.settings.contacts', [
             'settings' => SiteSetting::query()->whereIn('group', ['contacts', 'schedule', 'social', 'company'])->orderBy('group')->orderBy('sort_order')->get()->groupBy('group'),
         ]);
+    }
+
+    public function images(ImageOptimizationService $optimizer)
+    {
+        return view('admin.settings.images', [
+            'stats' => $optimizer->scan(),
+        ]);
+    }
+
+    public function compressImagesBatch(Request $request, ImageOptimizationService $optimizer)
+    {
+        $data = $request->validate([
+            'offset' => ['required', 'integer', 'min:0'],
+            'section' => ['nullable', 'string', 'max:190', 'regex:/^[A-Za-z0-9._-]+$/'],
+            'force' => ['nullable', 'boolean'],
+        ]);
+
+        return response()->json(
+            $optimizer->optimizeBatch(
+                (int) $data['offset'],
+                4,
+                $data['section'] ?? null,
+                $request->boolean('force')
+            )
+        );
     }
 
     public function updateGeneral(Request $request)
