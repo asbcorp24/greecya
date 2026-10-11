@@ -118,11 +118,20 @@
                             </div>
                         </form>
 
-                        <form method="post" action="{{ route('admin.panoramas.destroy', $panorama) }}" class="px-3 pb-3" onsubmit="return confirm('Удалить эту 360° панораму?')">
-                            @csrf
-                            @method('delete')
-                            <button class="btn btn-link text-danger p-0"><i class="bi bi-trash me-1"></i>Удалить</button>
-                        </form>
+                        <div class="px-3 pb-3 d-flex flex-wrap gap-2 align-items-center">
+                            <form method="post" action="{{ route('admin.panoramas.compress', $panorama) }}" onsubmit="return confirm('Сжать текущий файл панорамы и заменить им сохранённый файл?')">
+                                @csrf
+                                <button class="btn btn-outline-primary btn-sm rounded-pill">
+                                    <i class="bi bi-file-earmark-zip me-1"></i> Сжать изображение
+                                </button>
+                            </form>
+
+                            <form method="post" action="{{ route('admin.panoramas.destroy', $panorama) }}" onsubmit="return confirm('Удалить эту 360° панораму?')">
+                                @csrf
+                                @method('delete')
+                                <button class="btn btn-link text-danger btn-sm p-0"><i class="bi bi-trash me-1"></i>Удалить</button>
+                            </form>
+                        </div>
                     </article>
                 </div>
             @empty
