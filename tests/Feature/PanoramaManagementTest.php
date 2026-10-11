@@ -123,6 +123,43 @@ class PanoramaManagementTest extends TestCase
         $this->assertSame(1, Panorama::where('is_homepage', true)->count());
     }
 
+    public function test_manager_can_compress_existing_panorama_and_database_path_is_replaced(): void
+    {
+        Storage::fake('public');
+
+        $manager = User::where('email', 'manager@greecya.local')->firstOrFail();
+        $legacyImage = UploadedFile::fake()->image('legacy-panorama.png', 2400, 1200);
+        $legacyPath = 'panoramas/legacy-panorama.png';
+
+        Storage::disk('public')->put($legacyPath, file_get_contents($legacyImage->getRealPath()));
+
+        $panorama = Panorama::query()->create([
+            'title' => 'Старая панорама',
+            'image_path' => $legacyPath,
+            'is_active' => true,
+            'is_homepage' => false,
+            'sort_order' => 50,
+        ]);
+
+        $this->actingAs($manager)
+            ->post(route('admin.panoramas.compress', $panorama))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $panorama->refresh();
+
+        $this->assertNotSame($legacyPath, $panorama->image_path);
+        $this->assertStringEndsWith('.jpg', $panorama->image_path);
+        Storage::disk('public')->assertMissing($legacyPath);
+        Storage::disk('public')->assertExists($panorama->image_path);
+
+        $storedImage = getimagesize(Storage::disk('public')->path($panorama->image_path));
+        $this->assertIsArray($storedImage);
+        $this->assertSame('image/jpeg', $storedImage['mime']);
+        $this->assertSame(2400, $storedImage[0]);
+        $this->assertSame(1200, $storedImage[1]);
+    }
+
     public function test_panorama_admin_page_is_available_to_content_manager(): void
     {
         $manager = User::where('email', 'manager@greecya.local')->firstOrFail();
