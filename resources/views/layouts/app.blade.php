@@ -92,6 +92,11 @@
                 @else
                     <li class="nav-item ms-xl-1"><a class="nav-link" href="{{ route('login') }}">Войти</a></li>
                 @endauth
+                <li class="nav-item ms-xl-1 pwa-install-desktop d-none">
+                    <button type="button" class="btn btn-outline-primary rounded-pill px-3 pwa-install-trigger">
+                        <i class="bi bi-download me-1"></i> Установить
+                    </button>
+                </li>
                 <li class="nav-item ms-xl-1"><a class="btn btn-primary rounded-pill px-4" href="{{ route('booking.index') }}">Записаться</a></li>
             </ul>
         </div>
@@ -159,6 +164,10 @@
                     <span><strong>Регистрация</strong><small>Создать профиль</small></span>
                 </a>
             @endauth
+            <button type="button" class="mobile-more-link pwa-install-trigger pwa-install-mobile d-none">
+                <i class="bi bi-phone"></i>
+                <span><strong>Установить приложение</strong><small>Добавить «Грецию» на экран телефона</small></span>
+            </button>
             <a class="mobile-more-link" href="tel:{{ $phoneHref }}">
                 <i class="bi bi-telephone"></i>
                 <span><strong>Позвонить</strong><small>{{ $site['phone'] }}</small></span>
@@ -182,6 +191,34 @@
     </div>
 </div>
 @endunless
+
+<div class="modal fade" id="pwaInstallHelp" tabindex="-1" aria-labelledby="pwaInstallHelpLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <div class="text-primary small fw-bold text-uppercase mb-1">Приложение «Греция»</div>
+                    <h5 class="modal-title" id="pwaInstallHelpLabel">Установка на устройство</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="pwa-help-step">
+                    <span><i class="bi bi-apple"></i></span>
+                    <div><strong>iPhone / iPad</strong><small>Откройте сайт в Safari → нажмите «Поделиться» → «На экран Домой» → «Добавить».</small></div>
+                </div>
+                <div class="pwa-help-step">
+                    <span><i class="bi bi-android2"></i></span>
+                    <div><strong>Android</strong><small>В Chrome откройте меню браузера и выберите «Установить приложение» или «Добавить на главный экран».</small></div>
+                </div>
+                <div class="pwa-help-step">
+                    <span><i class="bi bi-display"></i></span>
+                    <div><strong>Компьютер</strong><small>В Chrome или Edge используйте значок установки в адресной строке либо пункт «Установить приложение» в меню браузера.</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @if ($errors->any())<div class="container mt-3"><div class="alert alert-danger rounded-4 border-0 shadow-sm"><strong>Проверьте заполнение формы:</strong><ul class="mb-0 mt-2">@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div></div>@endif
 @if (session('success'))<div class="container mt-3"><div class="alert alert-success rounded-4 border-0 shadow-sm">{{ session('success') }}</div></div>@endif
@@ -217,6 +254,7 @@
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('{{ asset('sw.js') }}').catch(()=>{}));}</script>
+<script src="{{ asset('js/pwa-install.js') }}?v={{ file_exists(public_path('js/pwa-install.js')) ? filemtime(public_path('js/pwa-install.js')) : 1 }}"></script>
 @stack('scripts')
 </body>
 </html>
