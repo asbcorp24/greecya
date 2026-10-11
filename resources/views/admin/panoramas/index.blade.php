@@ -4,6 +4,7 @@
 @section('eyebrow', 'Контент сайта')
 
 @section('content')
+@php($compressionResult = session('panorama_compression_result'))
 <div class="row g-4">
     <div class="col-xl-4">
         <div class="admin-card p-4 sticky-xl-top" style="top:1rem">
@@ -66,6 +67,7 @@
 
         <div class="row g-4">
             @forelse($panoramas as $panorama)
+                @php($stats = $panoramaStats[$panorama->id] ?? ['exists' => false, 'format' => '—', 'size' => '—', 'dimensions' => '—'])
                 <div class="col-lg-6">
                     <article class="admin-card overflow-hidden h-100">
                         <div class="position-relative">
@@ -79,6 +81,33 @@
                                 @endunless
                                 <span class="badge text-bg-dark">360°</span>
                             </div>
+                        </div>
+
+                        <div class="px-3 pt-3">
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <span class="badge rounded-pill text-bg-light border">
+                                    <i class="bi bi-file-earmark-image me-1"></i>{{ $stats['format'] }}
+                                </span>
+                                <span class="badge rounded-pill text-bg-light border">
+                                    <i class="bi bi-aspect-ratio me-1"></i>{{ $stats['dimensions'] }}
+                                </span>
+                                <span class="badge rounded-pill {{ $stats['exists'] ? 'text-bg-light border' : 'text-bg-danger' }}">
+                                    <i class="bi bi-hdd me-1"></i>{{ $stats['size'] }}
+                                </span>
+                            </div>
+
+                            @if((int) ($compressionResult['panorama_id'] ?? 0) === $panorama->id)
+                                <div class="alert alert-success mt-3 mb-0 rounded-4 border-0">
+                                    <div class="fw-bold mb-2"><i class="bi bi-check-circle-fill me-1"></i> Сжатие завершено</div>
+                                    <div class="small">
+                                        <strong>Было:</strong> {{ $compressionResult['before_size'] }} · {{ $compressionResult['before_dimensions'] }}<br>
+                                        <strong>Стало:</strong> {{ $compressionResult['after_size'] }} · {{ $compressionResult['after_dimensions'] }} · JPEG
+                                        @if(($compressionResult['saved_percent'] ?? 0) > 0)
+                                            <br><strong>Экономия:</strong> {{ $compressionResult['saved_percent'] }}%
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         <form method="post" action="{{ route('admin.panoramas.update', $panorama) }}" enctype="multipart/form-data" class="p-3 row g-2">
@@ -123,6 +152,7 @@
                                 @csrf
                                 <button class="btn btn-outline-primary btn-sm rounded-pill">
                                     <i class="bi bi-file-earmark-zip me-1"></i> Сжать изображение
+                                    <span class="ms-1 opacity-75">({{ $stats['size'] }})</span>
                                 </button>
                             </form>
 
