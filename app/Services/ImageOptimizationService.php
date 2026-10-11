@@ -15,6 +15,8 @@ class ImageOptimizationService
     private const WEBP_QUALITY = 82;
 
     private const SECTION_LABELS = [
+        'gallery.covers' => 'Обложки фотогалереи',
+        'gallery.photos' => 'Фото галереи',
         'gallery' => 'Фотогалерея',
         'panoramas' => '360° панорамы',
         'news' => 'Новости',
@@ -42,6 +44,7 @@ class ImageOptimizationService
             if (! isset($sections[$section])) {
                 $sections[$section] = [
                     'key' => $section,
+                    'path' => $this->sectionPath($section),
                     'label' => self::SECTION_LABELS[$section] ?? $this->humanizeSection($section),
                     'count' => 0,
                     'size' => 0,
@@ -407,7 +410,24 @@ class ImageOptimizationService
 
     private function sectionKey(string $path): string
     {
+        if (str_starts_with($path, 'gallery/covers/')) {
+            return 'gallery.covers';
+        }
+
+        if (str_starts_with($path, 'gallery/photos/')) {
+            return 'gallery.photos';
+        }
+
         return explode('/', $path, 2)[0] ?: 'root';
+    }
+
+    private function sectionPath(string $section): string
+    {
+        return match ($section) {
+            'gallery.covers' => 'gallery/covers',
+            'gallery.photos' => 'gallery/photos',
+            default => $section,
+        };
     }
 
     private function humanizeSection(string $section): string

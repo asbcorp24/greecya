@@ -74,6 +74,31 @@ class ImageOptimizationSettingsTest extends TestCase
         $this->assertSame(1280, $info[1]);
     }
 
+    public function test_gallery_covers_and_gallery_photos_are_separate_sections(): void
+    {
+        Storage::fake('public');
+
+        $cover = UploadedFile::fake()->image('cover.jpg', 1200, 800);
+        $photo = UploadedFile::fake()->image('photo.jpg', 1200, 800);
+        $slide = UploadedFile::fake()->image('slide.jpg', 1920, 900);
+
+        Storage::disk('public')->put('gallery/covers/cover.jpg', file_get_contents($cover->getRealPath()));
+        Storage::disk('public')->put('gallery/photos/photo.jpg', file_get_contents($photo->getRealPath()));
+        Storage::disk('public')->put('slides/slide.jpg', file_get_contents($slide->getRealPath()));
+
+        $manager = User::where('email', 'manager@greecya.local')->firstOrFail();
+
+        $this->actingAs($manager)
+            ->get(route('admin.settings.images'))
+            ->assertOk()
+            ->assertSee('Обложки фотогалереи')
+            ->assertSee('storage/app/public/gallery/covers/')
+            ->assertSee('Фото галереи')
+            ->assertSee('storage/app/public/gallery/photos/')
+            ->assertSee('Слайдер')
+            ->assertSee('storage/app/public/slides/');
+    }
+
     public function test_optimizer_skips_unchanged_file_after_first_successful_run(): void
     {
         Storage::fake('public');
