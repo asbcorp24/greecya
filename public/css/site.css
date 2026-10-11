@@ -163,3 +163,35 @@
     .mobile-more-link{padding:.7rem;gap:.6rem}
     .mobile-more-link>i{flex-basis:38px;width:38px;height:38px}
 }
+
+
+/* PWA install */
+.mobile-more-link.pwa-install-trigger{
+    width:100%;
+    font:inherit;
+    text-align:left;
+    cursor:pointer
+}
+.pwa-help-step{
+    display:flex;
+    gap:.9rem;
+    align-items:flex-start;
+    padding:.9rem 0;
+    border-bottom:1px solid rgba(8,106,149,.09)
+}
+.pwa-help-step:last-child{border-bottom:0}
+.pwa-help-step>span{
+    flex:0 0 42px;
+    width:42px;
+    height:42px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:14px;
+    background:var(--aqua);
+    color:var(--blue);
+    font-size:1.15rem
+}
+.pwa-help-step strong,.pwa-help-step small{display:block}
+.pwa-help-step strong{color:var(--ink);font-size:.92rem}
+.pwa-help-step small{color:var(--muted);line-height:1.5;margin-top:.2rem}
